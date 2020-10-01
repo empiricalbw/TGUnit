@@ -1,20 +1,24 @@
 -- Whether or not to enable this experimental library.
-local TGUF_LIB_ENABLED = true
+local TGU_LIB_ENABLED = true
 
---[[
-    TGUnit is a class that is used to monitor a unit ID and to emit events when
-    that unit ID's state changes
-]]
+-- TGUnit is a class that is used to monitor a unit ID and to emit events when
+-- that unit ID's state changes
 TGUnit = {}
 TGUnit.__index = TGUnit
+
+-- The timestamp when we last polled all units.
 TGUnit.lastPoll = 0
 
---[[
-    The set of TGUnits that have been instantiated.  This is keyed by unit ID
-    and if the same unit is "instantiated" twice the second instance will be
-    the same as the first.
-]]
-local TGUNIT_LIST = {}
+-- The set of TGUnits that have been instantiated.  This is keyed by unit ID
+-- and if the same unit is "instantiated" twice the second instance will be
+-- the same as the first.
+TGUnit.unitList = {}
+
+-- The frame that we will use to listen to events and updates.
+TGUnit.tguFrame = nil
+
+-- The time at which we entered the world.
+TGUnit.enteredWorldTime = nil
 
 -- Utility function for bitmasks.
 local function btst(mask1,mask2)
@@ -25,23 +29,24 @@ end
 function TGUnit:new(id)
     assert(id)
     if (id == "template") then
-        return TGUF.TEMPLATE_UNIT
+        return TGU.TEMPLATE_UNIT
     end
-    if (TGUNIT_LIST[id]) then
-        return TGUNIT_LIST[id]
+    if (TGUnit.unitList[id]) then
+        return TGUnit.unitList[id]
     end
 
     local unit = {}
-    setmetatable(unit,TGUnit)
+    setmetatable(unit, self)
     unit:TGUnit(id)
-    TGUNIT_LIST[id] = unit
+    TGUnit.unitList[id] = unit
     return unit
 end
 
 -- Construct a TGUnit.
 function TGUnit:TGUnit(id)
     self.id             = id
-    self.pollFlags      = TGUF.POLLFLAGS[id] or TGUF.ALLFLAGS
+    self.allFlags       = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.pollFlags      = TGU.POLLFLAGS[id] or TGU.NONPLAYERPOLL_MASK
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
@@ -53,7 +58,7 @@ function TGUnit:TGUnit(id)
     self.level          = nil
     self.combat         = nil
     self.leader         = nil
-    self.lootMaster     = (TGUF_MASTER_LOOTER_UNIT == unit)
+    self.lootMaster     = (TGU_MASTER_LOOTER_UNIT == unit)
     self.raidIcon       = nil
     self.role           = nil
     self.model          = nil
@@ -82,124 +87,126 @@ function TGUnit:TGUnit(id)
     if (id ~= "target" and string.find(id,"^target")) then
         TGUnit:new("target").indirectUnits[self] = self
     end
-    if (id ~= "focus" and string.find(id,"^focus")) then
-        TGUnit:new("focus").indirectUnits[self] = self
-    end
-
-    for k in pairs(TGUF.FLAGS) do
+    for k in pairs(TGU.FLAGS) do
         self.listeners["UPDATE_"..k] = {}
     end
 
-    self:Poll(TGUF.ALLFLAGS)
+    self:Poll(self.allFlags)
 end
 
+-- Add a listener that can handle updates when state tracked by a given TGUnit
+-- flag changes.  All methods on the client object of the form UPDATE_FOO,
+-- where "FOO" is one of the TGU.FLAGS names, will be invoked when any of the
+-- state monitored by flag FOO changes.
+--
+-- For instance, to receive events when the unit's health changes, your client
+-- object should have a method named UPDATE_HEALTH that takes a TGUnit as a
+-- parameter.
+--
+-- When a listener is initially registered, all of its UPDATE handlers will be
+-- immediately invoked to set initial state.
 function TGUnit:AddListener(obj)
-    for k in pairs(obj) do
-        if string.find(k,"^UPDATE_") then
-            self.listeners[k][obj] = obj
+    for k, v in pairs(self.listeners) do
+        if obj[k] then
+            v[obj] = obj
             obj[k](obj,self)
         end
     end
 end
 
-function TGUnit:RemoveListener(flag,obj)
-    for k in pairs(obj) do
-        if string.upper(k) == k then
-            self.listeners[k][obj] = nil
+-- Remove a listener from the unit.
+function TGUnit:RemoveListener(obj)
+    for k, v in pairs(self.listeners) do
+        if v[obj] then
+            v[obj] = nil
         end
     end
 end
 
+-- Called internally to poll the specified flags.  This is carefully designed
+-- so as to not allocate memory since it will be called very frequently and we
+-- don't want to stress the garbage collector.
 function TGUnit:Poll(flags)
-    -- The set of flags to poll and any changes observed.
-    local changedFlags = 0
-    local changed
+    -- The set of flags to poll - all poll-required flags if nothing specified.
     flags = flags or self.pollFlags
+
+    -- The set of flags that changed and therefore require update calls.
+    local changedFlags = 0
 
     -- Existence check is special - we always do it.
     local exists = UnitExists(self.id)
-    changed = (exists ~= self.exists)
-    if changed then
-        changedFlags = bit.bor(changedFlags,TGUF.FLAGS.EXISTS)
-        self.exists = exists
+    if exists ~= self.exists then
+        changedFlags = bit.bor(changedFlags, TGU.FLAGS.EXISTS)
+        self.exists  = exists
     end
 
-    -- Update name
-    if btst(flags,TGUF.FLAGS.NAME) then
-        local name = UnitName(self.id)
-        changed = (name ~= self.name)
-        if changed then
-            changedFlags = bit.bor(changedFlags,TGUF.FLAGS.NAME)
-            self.name = name
+    -- Update name.
+    if btst(flags, TGU.FLAGS.NAME) then
+        local name
+        if self.exists then
+            name = UnitName(self.id)
+        else
+            name = nil
+        end
+        if name ~= self.name then
+            changedFlags = bit.bor(changedFlags, TGU.FLAGS.NAME)
+            self.name    = name
         end
     end
 
-    -- Notify listeners
-    for handler,mask in pairs(TGUF.FLAG_HANDLERS) do
-        if btst(changedFlags,mask) then
+    -- Notify listeners.
+    for handler, mask in pairs(TGU.FLAG_HANDLERS) do
+        if btst(changedFlags, mask) then
             for obj in pairs(self.listeners[handler]) do
-                obj[handler](obj,self)
+                obj[handler](obj, self)
             end
         end
     end
 end
 
-function TGUnit.OnEvent(frame,event,...)
-    TGUnit[event](...)
-end
-
+-- Static method to schedule unit polling.
 function TGUnit.OnUpdate()
     local currTime = GetTime()
-    if currTime - TGUnit.lastPoll <= TGUF.POLL_RATE then
+    if currTime - TGUnit.lastPoll <= TGU.POLL_RATE then
         return
     end
 
-    for _,unit in pairs(TGUNIT_LIST) do
+    -- Poll only poll-required flags for all units.
+    for _, unit in pairs(TGUnit.unitList) do
         unit:Poll()
     end
 
     TGUnit.lastPoll = currTime
 end
 
-local firstTime = true
+-- Handle PLAYER_ENTERING_WORLD event.
 function TGUnit.PLAYER_ENTERING_WORLD()
-    TGDbg("PLAYER_ENTERING_WORLD")
-    for _,unit in pairs(TGUNIT_LIST) do
-        unit:Poll(TGUF.ALLFLAGS)
-    end
-
-    if firstTime then
-        local l = {}
-        function l:UPDATE_NAME(unit)
-            TGDbg(unit.id.." is now "..tostring(unit.name))
-        end
-        TGUnit:new("player"):AddListener(l)
-        TGUnit:new("target"):AddListener(l)
-        TGUnit:new("targettarget"):AddListener(l)
-        firstTime = false
+    -- Poll all flags for all units.
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:Poll(unit.allFlags)
     end
 end
 
+-- Handle PLAYER_TARGET_CHANGED event.
 function TGUnit.PLAYER_TARGET_CHANGED()
-    local target = TGUNIT_LIST["target"]
+    local target = TGUnit.unitList["target"]
     if target == nil then
         return
     end
 
-    target:Poll(TGUF.ALLFLAGS)
+    target:Poll(target.allFlags)
     for u in pairs(target.indirectUnits) do
-        u:Poll(TGUF.ALLFLAGS)
+        u:Poll(u.allFlags)
     end
 end
 
-if TGUF_LIB_ENABLED then
-    -- A dummy frame to get us the events we are interested in.
-    local TGUF_EV_FRAME = CreateFrame("Frame")
-    TGUF_EV_FRAME:SetScript("OnEvent",TGUnit.OnEvent)
-    TGUF_EV_FRAME:SetScript("OnUpdate",TGUnit.OnUpdate)
-    for k in pairs(TGUnit) do
-        if string.upper(k) == k then
-            TGUF_EV_FRAME:RegisterEvent(k)
-        end
+-- Debug function to print the unit list.
+function TGUnit.PrintUnitList()
+    for _, unit in pairs(TGUnit.unitList) do
+        TGDbg(unit.id)
     end
+end
+
+if TGU_LIB_ENABLED then
+    TGEventHandler.Register(TGUnit)
 end

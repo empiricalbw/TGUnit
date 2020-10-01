@@ -1,13 +1,15 @@
-## Interface: 60300
+## Interface: 11305
 ## Title: TGUnit
 ## DefaultState: enabled
-## Notes: Thor's Godly Unit Frames
+## Notes: Thor's Godly Unit
 ## Version 1.0
 ## Author: Dufus - Ursin
 ## URL: 
 ## SavedVariables: 
 
+TGEventHandler.lua
 TGDebugging.lua
-
 TGUnitConstants.lua
 TGUnit.lua
+
+TGTest.lua

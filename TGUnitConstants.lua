@@ -1,219 +1,211 @@
-TGUF = {}
+TGU = {}
 
---[[
-    This is the period between poll updates for units that the game interface
-    doesn't automatically generate events for, and some variables that get
-    polled for periodically.
-]]
-TGUF.POLL_RATE = 0.1 -- The delay between manual polls
+-- This is the period between poll updates for units that the game interface
+-- doesn't automatically generate events for, and some variables that get
+-- polled for periodically.
+TGU.POLL_RATE = 0.1 -- The delay between manual polls
 
 -- Bitmasks defining various attributes that we can poll.
-TGUF.FLAGS = {
-    ISPLAYERTARGET = bit.lshift(1, 0),
-    COMBOPOINTS    = bit.lshift(1, 1),
-    NAME           = bit.lshift(1, 2),
-    CLASS          = bit.lshift(1, 3),
-    HEALTH         = bit.lshift(1, 4),
-    MANA           = bit.lshift(1, 5),
-    LEVEL          = bit.lshift(1, 6),
-    COMBAT         = bit.lshift(1, 7),
-    BUFFS          = bit.lshift(1, 8),
-    DEBUFFS        = bit.lshift(1, 9),
-    SPELL          = bit.lshift(1,10),
-    REACTION       = bit.lshift(1,11),
-    LEADER         = bit.lshift(1,12),
-    RAIDICON       = bit.lshift(1,13),
-    NPC            = bit.lshift(1,14),
-    CLASSIFICATION = bit.lshift(1,15),
-    PVPSTATUS      = bit.lshift(1,16),
-    LIVING         = bit.lshift(1,17),
-    TAPPED         = bit.lshift(1,18),
-    ISVISIBLE      = bit.lshift(1,19),
-    INHEALINGRANGE = bit.lshift(1,20),
-    CREATURETYPE   = bit.lshift(1,21),
-    THREAT         = bit.lshift(1,22),
-    ROLE           = bit.lshift(1,23),
-    EXISTS         = bit.lshift(1,24),
+TGU.FLAGS = {
+    ISPLAYERTARGET = bit.lshift(1,  0),
+    COMBOPOINTS    = bit.lshift(1,  1),
+    NAME           = bit.lshift(1,  2),
+    CLASS          = bit.lshift(1,  3),
+    HEALTH         = bit.lshift(1,  4),
+    MANA           = bit.lshift(1,  5),
+    LEVEL          = bit.lshift(1,  6),
+    COMBAT         = bit.lshift(1,  7),
+    BUFFS          = bit.lshift(1,  8),
+    DEBUFFS        = bit.lshift(1,  9),
+    PLAYER_SPELL   = bit.lshift(1, 10),
+    REACTION       = bit.lshift(1, 11),
+    LEADER         = bit.lshift(1, 12),
+    RAIDICON       = bit.lshift(1, 13),
+    NPC            = bit.lshift(1, 14),
+    CLASSIFICATION = bit.lshift(1, 15),
+    PVPSTATUS      = bit.lshift(1, 16),
+    LIVING         = bit.lshift(1, 17),
+    TAPPED         = bit.lshift(1, 18),
+    ISVISIBLE      = bit.lshift(1, 19),
+    INHEALINGRANGE = bit.lshift(1, 20),
+    CREATURETYPE   = bit.lshift(1, 21),
+    THREAT         = bit.lshift(1, 22),
+    ROLE           = bit.lshift(1, 23),
+    EXISTS         = bit.lshift(1, 24),
 }
-TGUF.FLAG_HANDLERS = {}
+
+-- Map names in the set "UPDATE_FOO" to the bit TGU.FLAGS.FOO.
+TGU.FLAG_HANDLERS = {}
 local count = 0
-for k,v in pairs(TGUF.FLAGS) do
+for k, v in pairs(TGU.FLAGS) do
     count = count + 1
-    TGUF.FLAG_HANDLERS["UPDATE_"..k] = v
+    TGU.FLAG_HANDLERS["UPDATE_"..k] = v
 end
-TGUF.NUMFLAGS      = count
-TGUF.LASTFLAG      = bit.lshift(1,TGUF.NUMFLAGS)
-TGUF.ALLFLAGS      = TGUF.LASTFLAG - 1
+TGU.NUMFLAGS            = count
+TGU.LASTFLAG            = bit.lshift(1,TGU.NUMFLAGS)
 
---[[
-    This bitmask describes the set of attributes for which the game engine
-    generates events notifying us of a change.  These events are generated only
-    for the player.  Note that we special-case mana here.  The game generates
-    periodic mana updates every few seconds but as of 3.0.2 the UnitMana()
-    updates in REAL-TIME.  This means that we need to poll it periodically to
-    get the smooth mana regen the same way that the Blizzard UI does.
-]]
-TGUF.PLAYEREVENT_MASK = bit.bor(
-    TGUF.FLAGS.ISPLAYERTARGET,
-    TGUF.FLAGS.COMBOPOINTS,
-    TGUF.FLAGS.NAME,
-    TGUF.FLAGS.CLASS,
-    TGUF.FLAGS.HEALTH,
-    TGUF.FLAGS.LEVEL,
-    TGUF.FLAGS.COMBAT,
-    TGUF.FLAGS.BUFFS,
-    TGUF.FLAGS.DEBUFFS,
-    TGUF.FLAGS.THREAT)
-TGUF.PLAYERPOLL_MASK = bit.bor(
-    TGUF.FLAGS.MANA,
-    TGUF.FLAGS.REACTION,
-    TGUF.FLAGS.LEADER,
-    TGUF.FLAGS.RAIDICON,
-    TGUF.FLAGS.NPC,
-    TGUF.FLAGS.CLASSIFICATION,
-    TGUF.FLAGS.PVPSTATUS,
-    TGUF.FLAGS.LIVING,
-    TGUF.FLAGS.TAPPED,
-    TGUF.FLAGS.ISVISIBLE,
-    TGUF.FLAGS.INHEALINGRANGE,
-    TGUF.FLAGS.SPELL,
-    TGUF.FLAGS.CREATURETYPE,
-    TGUF.FLAGS.ROLE,
-    TGUF.FLAGS.EXISTS)
-assert(bit.bor(TGUF.PLAYEREVENT_MASK,TGUF.PLAYERPOLL_MASK) == TGUF.ALLFLAGS)
+-- This bitmask describes the set of attributes for which the game engine
+-- generates events notifying us of a change.  These events are generated only
+-- for the player.
+TGU.PLAYEREVENT_MASK = bit.bor(
+    TGU.FLAGS.ISPLAYERTARGET,
+    TGU.FLAGS.COMBOPOINTS,
+    TGU.FLAGS.NAME,
+    TGU.FLAGS.CLASS,
+    TGU.FLAGS.HEALTH,
+    TGU.FLAGS.LEVEL,
+    TGU.FLAGS.COMBAT,
+    TGU.FLAGS.BUFFS,
+    TGU.FLAGS.DEBUFFS,
+    TGU.FLAGS.THREAT)
+TGU.PLAYERPOLL_MASK = bit.bor(
+    TGU.FLAGS.MANA,
+    TGU.FLAGS.REACTION,
+    TGU.FLAGS.LEADER,
+    TGU.FLAGS.RAIDICON,
+    TGU.FLAGS.NPC,
+    TGU.FLAGS.CLASSIFICATION,
+    TGU.FLAGS.PVPSTATUS,
+    TGU.FLAGS.LIVING,
+    TGU.FLAGS.TAPPED,
+    TGU.FLAGS.ISVISIBLE,
+    TGU.FLAGS.INHEALINGRANGE,
+    TGU.FLAGS.PLAYER_SPELL,
+    TGU.FLAGS.CREATURETYPE,
+    TGU.FLAGS.ROLE,
+    TGU.FLAGS.EXISTS)
+TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
 
---[[
-    This bitmask describes the set of attributes for which the game engine
-    generates events notifying us of a change for all of the non-player unit
-    IDs which the game generates events for: target, focus, pet, mouseover,
-    partyX, raidX
+-- This bitmask describes the set of attributes for which the game engine
+-- generates events notifying us of a change for all of the non-player unit
+-- IDs which the game generates events for:
+--     target, pet, mouseover, partyX, raidX
+TGU.NONPLAYEREVENT_MASK = bit.bor(
+    TGU.FLAGS.ISPLAYERTARGET,
+    TGU.FLAGS.NAME,
+    TGU.FLAGS.CLASS,
+    TGU.FLAGS.HEALTH,
+    TGU.FLAGS.LEVEL,
+    TGU.FLAGS.BUFFS,
+    TGU.FLAGS.DEBUFFS)
+TGU.NONPLAYERPOLL_MASK = bit.bor(
+    TGU.FLAGS.MANA,
+    TGU.FLAGS.COMBOPOINTS,
+    TGU.FLAGS.COMBAT,
+    TGU.FLAGS.REACTION,
+    TGU.FLAGS.LEADER,
+    TGU.FLAGS.RAIDICON,
+    TGU.FLAGS.NPC,
+    TGU.FLAGS.CLASSIFICATION,
+    TGU.FLAGS.PVPSTATUS,
+    TGU.FLAGS.LIVING,
+    TGU.FLAGS.TAPPED,
+    TGU.FLAGS.ISVISIBLE,
+    TGU.FLAGS.INHEALINGRANGE,
+    TGU.FLAGS.CREATURETYPE,
+    TGU.FLAGS.THREAT,
+    TGU.FLAGS.ROLE,
+    TGU.FLAGS.EXISTS)
+TGU.ALL_NONPLAYER_FLAGS = bit.bor(TGU.NONPLAYEREVENT_MASK,
+                                  TGU.NONPLAYERPOLL_MASK)
 
-    See note above for information about polling mana.
-]]
-TGUF.NONPLAYEREVENT_MASK = bit.bor(
-    TGUF.FLAGS.ISPLAYERTARGET,
-    TGUF.FLAGS.NAME,
-    TGUF.FLAGS.CLASS,
-    TGUF.FLAGS.HEALTH,
-    TGUF.FLAGS.LEVEL,
-    TGUF.FLAGS.BUFFS,
-    TGUF.FLAGS.DEBUFFS)
-TGUF.NONPLAYERPOLL_MASK = bit.bor(
-    TGUF.FLAGS.MANA,
-    TGUF.FLAGS.COMBOPOINTS,
-    TGUF.FLAGS.COMBAT,
-    TGUF.FLAGS.REACTION,
-    TGUF.FLAGS.LEADER,
-    TGUF.FLAGS.RAIDICON,
-    TGUF.FLAGS.NPC,
-    TGUF.FLAGS.CLASSIFICATION,
-    TGUF.FLAGS.PVPSTATUS,
-    TGUF.FLAGS.LIVING,
-    TGUF.FLAGS.TAPPED,
-    TGUF.FLAGS.ISVISIBLE,
-    TGUF.FLAGS.INHEALINGRANGE,
-    TGUF.FLAGS.CREATURETYPE,
-    TGUF.FLAGS.THREAT,
-    TGUF.FLAGS.SPELL,
-    TGUF.FLAGS.ROLE,
-    TGUF.FLAGS.EXISTS)
-assert(bit.bor(TGUF.NONPLAYEREVENT_MASK,TGUF.NONPLAYERPOLL_MASK)
-        == TGUF.ALLFLAGS)
+-- Table that tells us all the flags based on unit ID.  If a unit ID is not
+-- present in this table, then TGU.ALL_NONPLAYER_FLAGS applies.
+TGU.ALLFLAGS = {
+    ["player"] = TGU.ALL_PLAYER_FLAGS,
+}
 
 -- Table that tells us what state needs to be polled based on unit ID.  If a
 -- unit ID is not present in this table, then all of its state requires
--- polling.
-TGUF.POLLFLAGS = {
-    ["player"]    = TGUF.PLAYERPOLL_MASK,
-    ["target"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["focus"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["pet"]       = TGUF.NONPLAYERPOLL_MASK,
-    ["mouseover"] = TGUF.NONPLAYERPOLL_MASK,
-    ["party1"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["party2"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["party3"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["party4"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid1"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid2"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid3"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid4"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid5"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid6"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid7"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid8"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid9"]     = TGUF.NONPLAYERPOLL_MASK,
-    ["raid10"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid11"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid12"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid13"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid14"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid15"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid16"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid17"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid18"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid19"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid20"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid21"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid22"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid23"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid24"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid25"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid26"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid27"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid28"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid29"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid30"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid31"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid32"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid33"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid34"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid35"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid36"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid37"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid38"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid39"]    = TGUF.NONPLAYERPOLL_MASK,
-    ["raid40"]    = TGUF.NONPLAYERPOLL_MASK,
+-- polling (TGU.ALL_NONPLAYER_FLAGS).
+TGU.POLLFLAGS = {
+    ["player"]    = TGU.PLAYERPOLL_MASK,
+    ["target"]    = TGU.NONPLAYERPOLL_MASK,
+    ["pet"]       = TGU.NONPLAYERPOLL_MASK,
+    ["mouseover"] = TGU.NONPLAYERPOLL_MASK,
+    ["party1"]    = TGU.NONPLAYERPOLL_MASK,
+    ["party2"]    = TGU.NONPLAYERPOLL_MASK,
+    ["party3"]    = TGU.NONPLAYERPOLL_MASK,
+    ["party4"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid1"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid2"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid3"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid4"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid5"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid6"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid7"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid8"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid9"]     = TGU.NONPLAYERPOLL_MASK,
+    ["raid10"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid11"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid12"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid13"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid14"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid15"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid16"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid17"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid18"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid19"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid20"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid21"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid22"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid23"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid24"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid25"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid26"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid27"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid28"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid29"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid30"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid31"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid32"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid33"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid34"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid35"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid36"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid37"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid38"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid39"]    = TGU.NONPLAYERPOLL_MASK,
+    ["raid40"]    = TGU.NONPLAYERPOLL_MASK,
 }
 
 -- Reaction types.
-TGUF.REACTION_FRIENDLY = 0 -- Unit is "green", won't aggro
-TGUF.REACTION_NEUTRAL  = 1 -- Unit is "yellow", won't aggro unless attacked
-TGUF.REACTION_HOSTILE  = 2 -- Unit is "red", will aggro
+TGU.REACTION_FRIENDLY = 0 -- Unit is "green", won't aggro
+TGU.REACTION_NEUTRAL  = 1 -- Unit is "yellow", won't aggro unless attacked
+TGU.REACTION_HOSTILE  = 2 -- Unit is "red", will aggro
 
 -- List of classification types.
-TGUF.CLASSIFICATION_NORMAL     = 0 -- Nothing special
-TGUF.CLASSIFICATION_RARE       = 1 -- Rare!
-TGUF.CLASSIFICATION_ELITE      = 2
-TGUF.CLASSIFICATION_RARE_ELITE = 3
-TGUF.CLASSIFICATION_BOSS       = 4
-TGUF.STRING_TO_CLASSIFICATION_TABLE = {
-    ["normal"]    = TGUF.CLASSIFICATION_NORMAL,
-    ["rare"]      = TGUF.CLASSIFICATION_RARE,
-    ["elite"]     = TGUF.CLASSIFICATION_ELITE,
-    ["rareelite"] = TGUF.CLASSIFICATION_RARE_ELITE,
-    ["worldboss"] = TGUF.CLASSIFICATION_BOSS
+TGU.CLASSIFICATION_NORMAL     = 0 -- Nothing special
+TGU.CLASSIFICATION_RARE       = 1 -- Rare!
+TGU.CLASSIFICATION_ELITE      = 2
+TGU.CLASSIFICATION_RARE_ELITE = 3
+TGU.CLASSIFICATION_BOSS       = 4
+TGU.STRING_TO_CLASSIFICATION_TABLE = {
+    ["normal"]    = TGU.CLASSIFICATION_NORMAL,
+    ["rare"]      = TGU.CLASSIFICATION_RARE,
+    ["elite"]     = TGU.CLASSIFICATION_ELITE,
+    ["rareelite"] = TGU.CLASSIFICATION_RARE_ELITE,
+    ["worldboss"] = TGU.CLASSIFICATION_BOSS
 }
 
 -- List of PVP types.
-TGUF.PVP_NONE        = 0   -- Not flagged
-TGUF.PVP_FLAGGED     = 1   -- PVP flagged
-TGUF.PVP_FFA_FLAGGED = 2   -- PVP free-for-all flagged
+TGU.PVP_NONE        = 0   -- Not flagged
+TGU.PVP_FLAGGED     = 1   -- PVP flagged
+TGU.PVP_FFA_FLAGGED = 2   -- PVP free-for-all flagged
 
 -- List of living types.
-TGUF.LIVING_ALIVE = 0      -- Unit is alive
-TGUF.LIVING_DEAD  = 1      -- Unit is dead
-TGUF.LIVING_GHOST = 2      -- Unit is a ghost
+TGU.LIVING_ALIVE = 0      -- Unit is alive
+TGU.LIVING_DEAD  = 1      -- Unit is dead
+TGU.LIVING_GHOST = 2      -- Unit is a ghost
 
 -- List of tapped types.
-TGUF.TAPPED_NONE   = 0     -- Unit is not tapped
-TGUF.TAPPED_PLAYER = 1     -- Unit is tapped by the player
-TGUF.TAPPED_OTHER  = 2     -- Unit is tapped by someone else
+TGU.TAPPED_NONE   = 0     -- Unit is not tapped
+TGU.TAPPED_PLAYER = 1     -- Unit is tapped by the player
+TGU.TAPPED_OTHER  = 2     -- Unit is tapped by someone else
 
---[[
-    This is a template unit, used when the template editor is open so that the
-    user can see various made-up stats.
-]]
-TGUF.TEMPLATE_UNIT =
+-- This is a template unit, used when the template editor is open so that the
+-- user can see various made-up stats.
+TGU.TEMPLATE_UNIT =
 {
     id             = "template",
     listeners      = {},
@@ -233,10 +225,10 @@ TGUF.TEMPLATE_UNIT =
     role           = "TANK",
     model          = nil,
     npc            = false,
-    reaction       = TGUF.REACTION_FRIENDLY,
-    classification = TGUF.CLASSIFICATION_ELITE,
-    pvpStatus      = TGUF.PVP_FLAGGED,
-    living         = TGUF.LIVING_ALIVE,
+    reaction       = TGU.REACTION_FRIENDLY,
+    classification = TGU.CLASSIFICATION_ELITE,
+    pvpStatus      = TGU.PVP_FLAGGED,
+    living         = TGU.LIVING_ALIVE,
     tapped         = false,
     comboPoints    = 5,
     isVisible      = 1,
