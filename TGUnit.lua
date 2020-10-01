@@ -288,6 +288,24 @@ function TGUnit.UNIT_POWER_FREQUENT(unitId, powerType)
     end
 end
 
+-- Handle UNIT_MAXPOWER event.
+function TGUnit.UNIT_MAXPOWER(unitId, powerType)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_MAXPOWER unitId "..unitId.." powerType "..powerType)
+        unit:NotifyListeners(unit:Poll_POWER())
+    end
+end
+
+-- Handle UNIT_DISPLAYPOWER event.
+function TGUnit.UNIT_DISPLAYPOWER(unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_DISPLAYPOWER unitId "..unitId.." powerType "..powerType)
+        unit:NotifyListeners(unit:Poll_POWER())
+    end
+end
+
 -- Debug function to print the unit list.
 function TGUnit.PrintUnitList()
     for _, unit in pairs(TGUnit.unitList) do
