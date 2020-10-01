@@ -235,6 +235,17 @@ function TGUnit.PLAYER_TARGET_CHANGED()
     end
 end
 
+-- Handle UNIT_NAME_UPDATE event.  This is typically invoked if the unit's name
+-- changes after the unit initially came into existence and is not invoked for
+-- example when you change targets to a target with a new name.
+function TGUnit.UNIT_NAME_UPDATE(unitId)
+    TGDbg("UNIT_NAME_UPDATE unitId "..unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        unit:NotifyListeners(unit:Poll_NAME())
+    end
+end
+
 -- Debug function to print the unit list.
 function TGUnit.PrintUnitList()
     for _, unit in pairs(TGUnit.unitList) do
