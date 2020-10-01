@@ -150,6 +150,18 @@ function TGUnit:Poll_EXISTS()
     return TGU.FLAGS.EXISTS
 end
 
+-- Update the name property and return a flag if it changed.
+function TGUnit:Poll_NAME()
+    -- UnitName returns nil if the unit doesn't exist.
+    local name = UnitName(self.id)
+    if name ~= self.name then
+        self.name = name
+        return TGU.FLAGS.NAME
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -163,16 +175,7 @@ function TGUnit:Poll(flags)
 
     -- Update name.
     if btst(flags, TGU.FLAGS.NAME) then
-        local name
-        if self.exists then
-            name = UnitName(self.id)
-        else
-            name = nil
-        end
-        if name ~= self.name then
-            changedFlags = bit.bor(changedFlags, TGU.FLAGS.NAME)
-            self.name    = name
-        end
+        changedFlags = bit.bor(changedFlags, self:Poll_NAME())
     end
 
     -- Notify listeners.
