@@ -42,8 +42,8 @@ for k, v in pairs(TGU.FLAGS) do
     count = count + 1
     TGU.FLAG_HANDLERS["UPDATE_"..k] = v
 end
-TGU.NUMFLAGS            = count
-TGU.LASTFLAG            = bit.lshift(1,TGU.NUMFLAGS)
+TGU.NUMFLAGS = count
+TGU.LASTFLAG = bit.lshift(1,TGU.NUMFLAGS)
 
 -- This bitmask describes the set of attributes for which the game engine
 -- generates events notifying us of a change.  These events are generated only
