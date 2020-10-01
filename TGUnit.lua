@@ -46,7 +46,7 @@ end
 function TGUnit:TGUnit(id)
     self.id             = id
     self.allFlags       = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.pollFlags      = TGU.POLLFLAGS[id] or TGU.NONPLAYERPOLL_MASK
+    self.pollFlags      = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
