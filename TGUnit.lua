@@ -150,6 +150,18 @@ function TGUnit:Poll_EXISTS()
     return TGU.FLAGS.EXISTS
 end
 
+-- Update the GUID property and return a flag if it changed.
+function TGUnit:Poll_GUID()
+    -- UnitGUID returns nil if the unit doesn't exist.
+    local guid = UnitGUID(self.id)
+    if guid == self.guid then
+        return 0
+    end
+
+    self.guid = guid
+    return TGU.FLAGS.GUID
+end
+
 -- Update the name property and return a flag if it changed.
 function TGUnit:Poll_NAME()
     -- UnitName returns nil if the unit doesn't exist.
@@ -173,7 +185,10 @@ function TGUnit:Poll(flags)
     -- initially populate this with the unconditional existence check.
     local changedFlags = self:Poll_EXISTS()
 
-    -- Update name.
+    -- Update everything.
+    if btst(flags, TGU.FLAGS.GUID) then
+        changedFlags = bit.bor(changedFlags, self:Poll_GUID())
+    end
     if btst(flags, TGU.FLAGS.NAME) then
         changedFlags = bit.bor(changedFlags, self:Poll_NAME())
     end
