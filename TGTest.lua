@@ -1,7 +1,24 @@
 TGTestObject = {}
 
+function TGTestObject:UPDATE_EXISTS(unit)
+    if unit.exists then
+        TGDbg(unit.id.." now exists")
+    else
+        TGDbg(unit.id.." no longer exists")
+    end
+end
+
+function TGTestObject:UPDATE_GUID(unit)
+    TGDbg(unit.id..":GUID is now "..tostring(unit.guid))
+end
+
 function TGTestObject:UPDATE_NAME(unit)
-    TGDbg(unit.id.." is now "..tostring(unit.name))
+    TGDbg(unit.id..":name is now "..tostring(unit.name))
+end
+
+function TGTestObject:UPDATE_POWER(unit)
+    TGDbg(unit.id..":power is now "..tostring(unit.power.type).."["..
+          tostring(unit.power.current).."/"..tostring(unit.power.max).."]")
 end
 
 TGTest = {}
