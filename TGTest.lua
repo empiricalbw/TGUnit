@@ -1,3 +1,5 @@
+TGTEST_UNIT_LIST = {"target"}
+
 TGTestObject = {}
 
 function TGTestObject:UPDATE_EXISTS(unit)
@@ -28,9 +30,9 @@ function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
           " isReloadingUi "..tostring(isReloadingUi))
 
     if isInitialLogin or isReloadingUi then
-        TGUnit:new("player"):AddListener(TGTestObject)
-        TGUnit:new("target"):AddListener(TGTestObject)
-        TGUnit:new("targettarget"):AddListener(TGTestObject)
+        for _, u in ipairs(TGTEST_UNIT_LIST) do
+            TGUnit:new(u):AddListener(TGTestObject)
+        end
     end
 end
 
