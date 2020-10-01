@@ -139,6 +139,17 @@ function TGUnit:NotifyListeners(changedFlags)
     end
 end
 
+-- Update the existence property and return a flag if it changed.
+function TGUnit:Poll_EXISTS()
+    local exists = UnitExists(self.id)
+    if exists == self.exists then
+        return 0
+    end
+
+    self.exists = exists
+    return TGU.FLAGS.EXISTS
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -146,15 +157,9 @@ function TGUnit:Poll(flags)
     -- The set of flags to poll - all poll-required flags if nothing specified.
     flags = flags or self.pollFlags
 
-    -- The set of flags that changed and therefore require update calls.
-    local changedFlags = 0
-
-    -- Existence check is special - we always do it.
-    local exists = UnitExists(self.id)
-    if exists ~= self.exists then
-        changedFlags = bit.bor(changedFlags, TGU.FLAGS.EXISTS)
-        self.exists  = exists
-    end
+    -- The set of flags that changed and therefore require update calls.  We
+    -- initially populate this with the unconditional existence check.
+    local changedFlags = self:Poll_EXISTS()
 
     -- Update name.
     if btst(flags, TGU.FLAGS.NAME) then
