@@ -124,6 +124,21 @@ function TGUnit:RemoveListener(obj)
     end
 end
 
+-- Notify everyone registered for the set of flags that their state has changed.
+function TGUnit:NotifyListeners(changedFlags)
+    if changedFlags == 0 then
+        return
+    end
+
+    for handler, mask in pairs(TGU.FLAG_HANDLERS) do
+        if btst(changedFlags, mask) then
+            for obj in pairs(self.listeners[handler]) do
+                obj[handler](obj, self)
+            end
+        end
+    end
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -156,13 +171,7 @@ function TGUnit:Poll(flags)
     end
 
     -- Notify listeners.
-    for handler, mask in pairs(TGU.FLAG_HANDLERS) do
-        if btst(changedFlags, mask) then
-            for obj in pairs(self.listeners[handler]) do
-                obj[handler](obj, self)
-            end
-        end
-    end
+    self:NotifyListeners(changedFlags)
 end
 
 -- Static method to schedule unit polling.
