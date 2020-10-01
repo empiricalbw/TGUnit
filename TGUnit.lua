@@ -87,6 +87,7 @@ function TGUnit:TGUnit(id)
     if (id ~= "target" and string.find(id,"^target")) then
         TGUnit:new("target").indirectUnits[self] = self
     end
+
     for k in pairs(TGU.FLAGS) do
         self.listeners["UPDATE_"..k] = {}
     end
