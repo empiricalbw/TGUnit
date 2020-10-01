@@ -174,6 +174,27 @@ function TGUnit:Poll_NAME()
     return 0
 end
 
+-- Update the health property and return a flag if it changed.  We update both
+-- current and max health here.
+function TGUnit:Poll_HEALTH()
+    -- UnitHealth and UnitHealthMax both return 0 if the target is not set.
+    local current
+    local max
+
+    if self.exists then
+        current = UnitHealth(self.id)
+        max     = UnitHealthMax(self.id)
+    end
+
+    if (self.health.current == current and self.health.max == max) then
+        return 0
+    end
+
+    self.health.current = current
+    self.health.max     = max
+    return TGU.FLAGS.HEALTH
+end
+
 -- Update the power property and return a flag if it changed.  We update all
 -- parts of the power (current, max, type) here.
 function TGUnit:Poll_POWER()
@@ -218,6 +239,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.NAME) then
         changedFlags = bit.bor(changedFlags, self:Poll_NAME())
+    end
+    if btst(flags, TGU.FLAGS.HEALTH) then
+        changedFlags = bit.bor(changedFlags, self:Poll_HEALTH())
     end
     if btst(flags, TGU.FLAGS.POWER) then
         changedFlags = bit.bor(changedFlags, self:Poll_POWER())
@@ -273,6 +297,24 @@ function TGUnit.UNIT_NAME_UPDATE(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
         unit:NotifyListeners(unit:Poll_NAME())
+    end
+end
+
+-- Handle UNIT_HEALTH_FREQUENT event.
+function TGUnit.UNIT_HEALTH_FREQUENT(unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_HEALTH_UPDATE unitId "..unitId)
+        unit:NotifyListeners(unit:Poll_HEALTH())
+    end
+end
+
+-- Handle UNIT_MAXHEALTH event.
+function TGUnit.UNIT_MAXHEALTH(unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_MAXHEALTH unitId "..unitId)
+        unit:NotifyListeners(unit:Poll_HEALTH())
     end
 end
 
