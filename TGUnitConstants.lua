@@ -32,6 +32,7 @@ TGU.FLAGS = {
     THREAT         = bit.lshift(1, 22),
     ROLE           = bit.lshift(1, 23),
     EXISTS         = bit.lshift(1, 24),
+    GUID           = bit.lshift(1, 25),
 }
 
 -- Map names in the set "UPDATE_FOO" to the bit TGU.FLAGS.FOO.
@@ -73,7 +74,8 @@ TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.ROLE,
-    TGU.FLAGS.EXISTS)
+    TGU.FLAGS.EXISTS,
+    TGU.FLAGS.GUID)
 TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
 
 -- This bitmask describes the set of attributes for which the game engine
@@ -105,7 +107,8 @@ TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.THREAT,
     TGU.FLAGS.ROLE,
-    TGU.FLAGS.EXISTS)
+    TGU.FLAGS.EXISTS,
+    TGU.FLAGS.GUID)
 TGU.ALL_NONPLAYER_FLAGS = bit.bor(TGU.NONPLAYEREVENT_MASK,
                                   TGU.NONPLAYERPOLL_MASK)
 
