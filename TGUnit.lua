@@ -220,7 +220,9 @@ function TGUnit.PLAYER_ENTERING_WORLD()
     end
 end
 
--- Handle PLAYER_TARGET_CHANGED event.
+-- Handle PLAYER_TARGET_CHANGED event.  When the player's target changes, we
+-- need to poll all flags manually, including things like the name which we
+-- would normally get a UNIT_NAME_UPDATE event for.
 function TGUnit.PLAYER_TARGET_CHANGED()
     local target = TGUnit.unitList["target"]
     if target == nil then
