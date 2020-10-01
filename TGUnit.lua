@@ -53,7 +53,7 @@ function TGUnit:TGUnit(id)
     self.class          = {localizedClass=nil,englishClass=nil}
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
-    self.mana           = {type=nil,current=nil,max=nil}
+    self.power          = {type=nil,current=nil,max=nil}
     self.spell          = {}
     self.level          = nil
     self.combat         = nil

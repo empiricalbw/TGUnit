@@ -12,7 +12,7 @@ TGU.FLAGS = {
     NAME           = bit.lshift(1,  2),
     CLASS          = bit.lshift(1,  3),
     HEALTH         = bit.lshift(1,  4),
-    MANA           = bit.lshift(1,  5),
+    POWER          = bit.lshift(1,  5),
     LEVEL          = bit.lshift(1,  6),
     COMBAT         = bit.lshift(1,  7),
     BUFFS          = bit.lshift(1,  8),
@@ -59,7 +59,7 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.DEBUFFS,
     TGU.FLAGS.THREAT)
 TGU.PLAYERPOLL_MASK = bit.bor(
-    TGU.FLAGS.MANA,
+    TGU.FLAGS.POWER,
     TGU.FLAGS.REACTION,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
@@ -89,7 +89,7 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
-    TGU.FLAGS.MANA,
+    TGU.FLAGS.POWER,
     TGU.FLAGS.COMBOPOINTS,
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.REACTION,
