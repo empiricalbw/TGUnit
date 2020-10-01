@@ -174,6 +174,33 @@ function TGUnit:Poll_NAME()
     return 0
 end
 
+-- Update the power property and return a flag if it changed.  We update all
+-- parts of the power (current, max, type) here.
+function TGUnit:Poll_POWER()
+    -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the target is
+    -- not set.
+    local current
+    local max
+    local typ
+
+    if self.exists then
+        current = UnitPower(self.id)
+        max     = UnitPowerMax(self.id)
+        typ     = UnitPowerType(self.id)
+    end
+
+    if (self.power.current == current and
+        self.power.max == max and
+        self.power.type == typ) then
+        return 0
+    end
+
+    self.power.type    = typ
+    self.power.current = current
+    self.power.max     = max
+    return TGU.FLAGS.POWER
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -192,6 +219,9 @@ function TGUnit:Poll(flags)
     if btst(flags, TGU.FLAGS.NAME) then
         changedFlags = bit.bor(changedFlags, self:Poll_NAME())
     end
+    if btst(flags, TGU.FLAGS.POWER) then
+        changedFlags = bit.bor(changedFlags, self:Poll_POWER())
+    end
 
     -- Notify listeners.
     self:NotifyListeners(changedFlags)
@@ -206,7 +236,7 @@ function TGUnit.OnUpdate()
 
     -- Poll only poll-required flags for all units.
     for _, unit in pairs(TGUnit.unitList) do
-        unit:Poll()
+        unit:Poll(unit.pollFlags)
     end
 
     TGUnit.lastPoll = currTime
@@ -243,6 +273,18 @@ function TGUnit.UNIT_NAME_UPDATE(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
         unit:NotifyListeners(unit:Poll_NAME())
+    end
+end
+
+-- Handle UNIT_POWER_FREQUENT event.  This updates the current power (mana,
+-- rage, energy, etc) amount and can tick frequently.  On Classic, this appears
+-- to tick only every couple of seconds, but it gets called twice for each of
+-- those ticks in rapid succession.
+function TGUnit.UNIT_POWER_FREQUENT(unitId, powerType)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_POWER_UPDATE unitId "..unitId.." powerType "..powerType)
+        unit:NotifyListeners(unit:Poll_POWER())
     end
 end
 
