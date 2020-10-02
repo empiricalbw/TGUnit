@@ -32,6 +32,14 @@ function TGTestObject:UPDATE_LEVEL(unit)
     TGDbg(unit.id..":level is now "..tostring(unit.level))
 end
 
+function TGTestObject:UPDATE_ISPLAYERTARGET(unit)
+    if unit.isPlayerTarget then
+        TGDbg(unit.id..": is player target")
+    else
+        TGDbg(unit.id..": is no longer player target")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
