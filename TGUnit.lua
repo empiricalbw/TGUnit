@@ -239,6 +239,19 @@ function TGUnit:Poll_LEVEL()
     return TGU.FLAGS.LEVEL
 end
 
+-- Update the "is player target" property and return a flag if it changed.
+function TGUnit:Poll_ISPLAYERTARGET()
+    -- UnitIsUnit returns false if one of the units doesn't exist.
+    local isPlayerTarget = (UnitExists("target") and
+                            UnitIsUnit(self.id, "target"))
+    if self.isPlayerTarget == isPlayerTarget then
+        return 0
+    end
+
+    self.isPlayerTarget = isPlayerTarget
+    return TGU.FLAGS.ISPLAYERTARGET
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -265,6 +278,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.LEVEL) then
         changedFlags = bit.bor(changedFlags, self:Poll_LEVEL())
+    end
+    if btst(flags, TGU.FLAGS.ISPLAYERTARGET) then
+        changedFlags = bit.bor(changedFlags, self:Poll_ISPLAYERTARGET())
     end
 
     -- Notify listeners.
@@ -295,9 +311,21 @@ function TGUnit.PLAYER_ENTERING_WORLD()
 end
 
 -- Handle PLAYER_TARGET_CHANGED event.  When the player's target changes, we
--- need to poll all flags manually, including things like the name which we
--- would normally get a UNIT_NAME_UPDATE event for.
+-- need to poll all flags for target-derived units manually (target,
+-- targettarget, etc), including things like the name which we would normally
+-- get a UNIT_NAME_UPDATE event for.
+--
+-- We also have to update ISPLAYERTARGET on all units.  This leads to some
+-- minor duplication since we will be polling everything on the target-derived
+-- units already, but it's not a big deal.
 function TGUnit.PLAYER_TARGET_CHANGED()
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:Poll(TGU.FLAGS.ISPLAYERTARGET)
+    end
+
+    -- The "target" unit object will exist if anyone is watching "target" or
+    -- anything derived from it (even if no one is explicitly watching
+    -- "target").
     local target = TGUnit.unitList["target"]
     if target == nil then
         return
