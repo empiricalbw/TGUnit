@@ -172,6 +172,57 @@ TGU.POLLFLAGS = {
     ["raid40"]    = TGU.NONPLAYERPOLL_MASK,
 }
 
+-- Table that maps a unit id to that unit id's pet id.  This is used when the
+-- UNIT_PET event fires, which gives us the pet's owner as the id rather than
+-- the pet itself.
+TGU.PETMAP = { 
+    ["player"] = "pet",
+    ["party1"] = "partypet1",
+    ["party2"] = "partypet2",
+    ["party3"] = "partypet3",
+    ["party4"] = "partypet4",
+    ["raid1"]  = "raidpet1",
+    ["raid2"]  = "raidpet2",
+    ["raid3"]  = "raidpet3",
+    ["raid4"]  = "raidpet4",
+    ["raid5"]  = "raidpet5",
+    ["raid6"]  = "raidpet6",
+    ["raid7"]  = "raidpet7",
+    ["raid8"]  = "raidpet8",
+    ["raid9"]  = "raidpet9",
+    ["raid10"] = "raidpet10",
+    ["raid11"] = "raidpet11",
+    ["raid12"] = "raidpet12",
+    ["raid13"] = "raidpet13",
+    ["raid14"] = "raidpet14",
+    ["raid15"] = "raidpet15",
+    ["raid16"] = "raidpet16",
+    ["raid17"] = "raidpet17",
+    ["raid18"] = "raidpet18",
+    ["raid19"] = "raidpet19",
+    ["raid20"] = "raidpet20",
+    ["raid21"] = "raidpet21",
+    ["raid22"] = "raidpet22",
+    ["raid23"] = "raidpet23",
+    ["raid24"] = "raidpet24",
+    ["raid25"] = "raidpet25",
+    ["raid26"] = "raidpet26",
+    ["raid27"] = "raidpet27",
+    ["raid28"] = "raidpet28",
+    ["raid29"] = "raidpet29",
+    ["raid30"] = "raidpet30",
+    ["raid31"] = "raidpet31",
+    ["raid32"] = "raidpet32",
+    ["raid33"] = "raidpet33",
+    ["raid34"] = "raidpet34",
+    ["raid35"] = "raidpet35",
+    ["raid36"] = "raidpet36",
+    ["raid37"] = "raidpet37",
+    ["raid38"] = "raidpet38",
+    ["raid39"] = "raidpet39",
+    ["raid40"] = "raidpet40",
+}
+
 -- Reaction types.
 TGU.REACTION_FRIENDLY = 0 -- Unit is "green", won't aggro
 TGU.REACTION_NEUTRAL  = 1 -- Unit is "yellow", won't aggro unless attacked

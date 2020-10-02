@@ -405,6 +405,17 @@ function TGUnit.UNIT_LEVEL(unitId)
     end
 end
 
+-- Handle UNIT_PET event.  This fires when a unit's pet changes (is summoned or
+-- dismissed); much like when the player target changes we just need to poll
+-- everything.
+function TGUnit.UNIT_PET(unitId)
+    local petUnit = TGUnit.unitList[TGU.PETMAP[unitId]]
+    if petUnit ~= nil then
+        TGDbg("UNIT_PET unitId "..unitId)
+        petUnit:Poll(petUnit.allFlags)
+    end
+end
+
 -- Debug function to print the unit list.
 function TGUnit.PrintUnitList()
     for _, unit in pairs(TGUnit.unitList) do
