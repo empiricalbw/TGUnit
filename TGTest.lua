@@ -28,6 +28,10 @@ function TGTestObject:UPDATE_POWER(unit)
           tostring(unit.power.current).."/"..tostring(unit.power.max).."]")
 end
 
+function TGTestObject:UPDATE_LEVEL(unit)
+    TGDbg(unit.id..":level is now "..tostring(unit.level))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
