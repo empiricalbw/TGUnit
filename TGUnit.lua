@@ -222,6 +222,23 @@ function TGUnit:Poll_POWER()
     return TGU.FLAGS.POWER
 end
 
+-- Update the level property and return a flag if it changed.
+function TGUnit:Poll_LEVEL()
+    -- UnitLevel returns 0 if the target is not set.
+    local level
+
+    if self.exists then
+        level = UnitLevel(self.id)
+    end
+
+    if self.level == level then
+        return 0
+    end
+
+    self.level = level
+    return TGU.FLAGS.LEVEL
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -245,6 +262,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.POWER) then
         changedFlags = bit.bor(changedFlags, self:Poll_POWER())
+    end
+    if btst(flags, TGU.FLAGS.LEVEL) then
+        changedFlags = bit.bor(changedFlags, self:Poll_LEVEL())
     end
 
     -- Notify listeners.
@@ -345,6 +365,15 @@ function TGUnit.UNIT_DISPLAYPOWER(unitId)
     if unit ~= nil then
         TGDbg("UNIT_DISPLAYPOWER unitId "..unitId.." powerType "..powerType)
         unit:NotifyListeners(unit:Poll_POWER())
+    end
+end
+
+-- Handle UNIT_LEVEL event.
+function TGUnit.UNIT_LEVEL(unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_LEVEL unitId "..unitId)
+        unit:NotifyListeners(unit:Poll_LEVEL())
     end
 end
 
