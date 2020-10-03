@@ -61,6 +61,14 @@ function TGTestObject:UPDATE_DEBUFFS(unit)
     TGDbg(debuffStr.."]")
 end
 
+function TGTestObject:UPDATE_COMBAT(unit)
+    if unit.combat then
+        TGDbg(unit.id..": is now in combat")
+    else
+        TGDbg(unit.id..": is no longer in combat")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
