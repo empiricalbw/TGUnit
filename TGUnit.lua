@@ -29,6 +29,11 @@ local function btst(mask1,mask2)
     return bit.band(mask1,mask2) ~= 0
 end
 
+-- Utility function for printing events.
+local function TGEvt(str)
+    --TGDbg(str)
+end
+
 -- Instantiate a new TGUnit.  If the unit already exists, return it instead.
 function TGUnit:new(id)
     assert(id)
@@ -443,7 +448,7 @@ end
 -- changes after the unit initially came into existence and is not invoked for
 -- example when you change targets to a target with a new name.
 function TGUnit.UNIT_NAME_UPDATE(unitId)
-    TGDbg("UNIT_NAME_UPDATE unitId "..unitId)
+    TGEvt("UNIT_NAME_UPDATE unitId "..unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
         unit:NotifyListeners(unit:Poll_NAME())
@@ -454,7 +459,7 @@ end
 function TGUnit.UNIT_HEALTH_FREQUENT(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_HEALTH_UPDATE unitId "..unitId)
+        TGEvt("UNIT_HEALTH_UPDATE unitId "..unitId)
         unit:NotifyListeners(unit:Poll_HEALTH())
     end
 end
@@ -463,7 +468,7 @@ end
 function TGUnit.UNIT_MAXHEALTH(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_MAXHEALTH unitId "..unitId)
+        TGEvt("UNIT_MAXHEALTH unitId "..unitId)
         unit:NotifyListeners(unit:Poll_HEALTH())
     end
 end
@@ -475,7 +480,7 @@ end
 function TGUnit.UNIT_POWER_FREQUENT(unitId, powerType)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_POWER_UPDATE unitId "..unitId.." powerType "..powerType)
+        TGEvt("UNIT_POWER_UPDATE unitId "..unitId.." powerType "..powerType)
         unit:NotifyListeners(unit:Poll_POWER())
     end
 end
@@ -484,7 +489,7 @@ end
 function TGUnit.UNIT_MAXPOWER(unitId, powerType)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_MAXPOWER unitId "..unitId.." powerType "..powerType)
+        TGEvt("UNIT_MAXPOWER unitId "..unitId.." powerType "..powerType)
         unit:NotifyListeners(unit:Poll_POWER())
     end
 end
@@ -493,7 +498,7 @@ end
 function TGUnit.UNIT_DISPLAYPOWER(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_DISPLAYPOWER unitId "..unitId.." powerType "..powerType)
+        TGEvt("UNIT_DISPLAYPOWER unitId "..unitId.." powerType "..powerType)
         unit:NotifyListeners(unit:Poll_POWER())
     end
 end
@@ -502,7 +507,7 @@ end
 function TGUnit.UNIT_LEVEL(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_LEVEL unitId "..unitId)
+        TGEvt("UNIT_LEVEL unitId "..unitId)
         unit:NotifyListeners(unit:Poll_LEVEL())
     end
 end
@@ -513,7 +518,7 @@ end
 function TGUnit.UNIT_PET(unitId)
     local petUnit = TGUnit.unitList[TGU.PETMAP[unitId]]
     if petUnit ~= nil then
-        TGDbg("UNIT_PET unitId "..unitId)
+        TGEvt("UNIT_PET unitId "..unitId)
         petUnit:Poll(petUnit.allFlags)
     end
 end
@@ -542,7 +547,7 @@ end
 function TGUnit.UNIT_AURA(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGDbg("UNIT_AURA unitId "..unitId)
+        TGEvt("UNIT_AURA unitId "..unitId)
         unit:NotifyListeners(unit:Poll_BUFFS())
         unit:NotifyListeners(unit:Poll_DEBUFFS())
     end
@@ -553,7 +558,7 @@ end
 function TGUnit.PLAYER_REGEN_DISABLED()
     local unit = TGUnit.unitList["player"]
     if unit ~= nil then
-        TGDbg("PLAYER_REGEN_DISABLED")
+        TGEvt("PLAYER_REGEN_DISABLED")
         unit:NotifyListeners(unit:Poll_COMBAT())
     end
 end
@@ -563,7 +568,7 @@ end
 function TGUnit.PLAYER_REGEN_ENABLED()
     local unit = TGUnit.unitList["player"]
     if unit ~= nil then
-        TGDbg("PLAYER_REGEN_ENABLED")
+        TGEvt("PLAYER_REGEN_ENABLED")
         unit:NotifyListeners(unit:Poll_COMBAT())
     end
 end
