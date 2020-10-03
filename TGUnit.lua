@@ -79,7 +79,8 @@ function TGUnit:TGUnit(id)
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
     self.power          = {type=nil,current=nil,max=nil}
-    self.spell          = {}
+    self.playerCastInfo = {}
+    self.logCastInfo    = {}
     self.level          = nil
     self.combat         = nil
     self.leader         = nil
@@ -384,6 +385,73 @@ function TGUnit:Poll_COMBAT()
     return 0
 end
 
+-- Update the player's spellcast.  In Classic, only the player's spellcast can
+-- be queried programatically.  We do receive events in the combat log for when
+-- other units start casting and if their casts caused damage but we don't get
+-- events for all ways in which units can stop casting, so we split the player's
+-- queryable cast info out from combat log cast info.
+function TGUnit:Poll_PLAYER_SPELL()
+    assert(self.id == "player")
+
+    local spell, _, texture, startTime, endTime, _, castGUID = CastingInfo()
+
+    if spell ~= nil then
+        spellType = "Casting"
+    else
+        -- Note that displayName for a channeled spell just returns
+        -- "Channeling" instead of the spell name - this is because the
+        -- Blizzard UI only displays the spell name for a casted spell and just
+        -- displays "Channeling" for a channeled spell.  So we probably want
+        -- to use the spell name instead of the display name.
+        castGUID = nil
+        spell, _, texture, startTime, endTime = ChannelInfo()
+
+        if spell ~= nil then
+            spellType = "Channeling"
+        end
+    end
+
+    if startTime ~= nil then
+        startTime = startTime / 1000.0
+    end
+    if endTime ~= nil then
+        endTime = endTime / 1000.0
+    end
+
+    local changed = (spellType    ~= self.playerCastInfo.spellType or
+                     spell        ~= self.playerCastInfo.spell or
+                     texture      ~= self.playerCastInfo.texture or
+                     startTime    ~= self.playerCastInfo.startTime or
+                     endTime      ~= self.playerCastInfo.endTime or
+                     castGUID     ~= self.playerCastInfo.castGUID)
+    if changed then
+        self.playerCastInfo.spellType    = spellType
+        self.playerCastInfo.spell        = spell
+        self.playerCastInfo.texture      = texture
+        self.playerCastInfo.startTime    = startTime
+        self.playerCastInfo.endTime      = endTime
+        self.playerCastInfo.castGUID     = castGUID
+        return TGU.FLAGS.PLAYER_SPELL
+    end
+
+    return 0
+end
+
+-- Update a unit's combat log spellcast.  Since we can't actually poll anything
+-- from the Classic client about non-player units, this method needs to take
+-- the spell state as method arguments.
+function TGUnit:Update_COMBAT_SPELL(timestamp, spell)
+    local changed = (timestamp ~= self.logCastInfo.timestamp or
+                     spell ~= self.logCastInfo.spell)
+    if changed then
+        self.logCastInfo.timestamp = timestamp
+        self.logCastInfo.spell     = spell
+        return TGU.FLAGS.COMBAT_SPELL
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -422,6 +490,12 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.COMBAT) then
         changedFlags = bit.bor(changedFlags, self:Poll_COMBAT())
+    end
+    if btst(flags, TGU.FLAGS.PLAYER_SPELL) then
+        changedFlags = bit.bor(changedFlags, self:Poll_PLAYER_SPELL())
+    end
+    if btst(flags, TGU.FLAGS.COMBAT_SPELL) then
+        changedFlags = bit.bor(changedFlags, self:Update_COMBAT_SPELL(nil, nil))
     end
 
     -- Notify listeners.
@@ -604,6 +678,120 @@ function TGUnit.PLAYER_REGEN_ENABLED()
     if unit ~= nil then
         TGEvt("PLAYER_REGEN_ENABLED")
         unit:NotifyListeners(unit:Poll_COMBAT())
+    end
+end
+
+-- Handle SPELLCAST events.  The typical chain of events goes as follows for a
+-- non-instant spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_SUCCEEDED
+--      UNIT_SPELLCAST_STOP
+--
+-- If the player moves to cancel the spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_STOP
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--
+-- If the player hits escape to cancel the spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_FAILED_QUIET
+--      UNIT_SPELLCAST_STOP
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--
+-- If the player starts a cast then tries to do an instant-cast spell while
+-- casting:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_FAILED (for a new castingGUID)
+--      UNIT_SPELLCAST_SUCCEEDED
+--      UNIT_SPELLCAST_STOP
+--
+-- If the player is out of range at the start of the cast or tries to cast
+-- a damage spell on a friendly target:
+--
+--      UNIT_SPELLCAST_FAILED
+--
+-- If the player performs an instant-cast spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_SUCCEEDED
+--
+-- If the player tries to dispel something but there is nothing to dispel:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_FAILED
+--
+-- When channeling, something like Mind Flay goes like this if the cast lands
+-- (note the missing castGUIDs on the CHANNEL events):
+--
+--      UNIT_SPELLCAST_SENT
+--      UNIT_SPELLCAST_CHANNEL_START (with castGUID == nil)
+--      UNIT_SPELLCAST_SUCCEEDED (fires when the cast LANDS, not when it
+--                                completes)
+--      ...tick, tick, tick...
+--      UNIT_SPELLCAST_CHANNEL_STOP (with castGUID == nil)
+--
+-- Note: None of these events seem to fire for hostile targets (tested on
+-- Defias Pillager casters).  They may fire for party and raid members.  They
+-- also don't fire for the Warlock imp firebolt spell (and probably other
+-- spells) - even when we have the pet selected as our target while it is
+-- casting.
+function TGUnit.HandleUnitSpellcastEvent(unitId, castGUID, spellID)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        unit:NotifyListeners(unit:Poll_PLAYER_SPELL())
+    end
+end
+TGUnit.UNIT_SPELLCAST_START          = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_STOP           = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_DELAYED        = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_START  = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_STOP   = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_UPDATE = TGUnit.HandleUnitSpellcastEvent
+
+function TGUnit.COMBAT_LOG_EVENT_UNFILTERED()
+    TGUnit.Parse_COMBAT_LOG_EVENT_UNFILTERED(CombatLogGetCurrentEventInfo())
+end
+function TGUnit.Parse_COMBAT_LOG_EVENT_UNFILTERED(...)
+    local timestamp, event, _, sourceGUID, _, _, _, destGUID, _, _, _,
+          _, spellName = ...
+
+    if (event == "SPELL_CAST_START" or
+        event == "SPELL_CAST_SUCCESS" or
+        event == "SPELL_CAST_FAILED")
+    then
+        local start
+        if event == "SPELL_CAST_START" then
+            start = true
+        elseif event == "SPELL_CAST_SUCCESS" then
+            start = (TGU.CHANNELED_SPELL_NAME_TO_ID[spellName] ~= nil)
+        elseif event == "SPELL_CAST_FAILED" then
+            start = false
+        end
+
+        local guidUnits = TGUnit.guidList[sourceGUID]
+        if guidUnits ~= nil then
+            for unit in pairs(guidUnits) do
+                if start then
+                    unit:NotifyListeners(unit:Update_COMBAT_SPELL(timestamp,
+                                                                  spellName))
+                else
+                    unit:NotifyListeners(unit:Update_COMBAT_SPELL(nil, nil))
+                end
+            end
+        end
     end
 end
 

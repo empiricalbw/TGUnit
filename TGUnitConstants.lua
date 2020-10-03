@@ -17,7 +17,7 @@ TGU.FLAGS = {
     COMBAT         = bit.lshift(1,  7), -- In combat or not
     BUFFS          = bit.lshift(1,  8), -- Unit buffs
     DEBUFFS        = bit.lshift(1,  9), -- Unit debuffs
-    PLAYER_SPELL   = bit.lshift(1, 10), -- ***
+    PLAYER_SPELL   = bit.lshift(1, 10), -- Spell being cast by the player
     REACTION       = bit.lshift(1, 11), -- ***
     LEADER         = bit.lshift(1, 12), -- ***
     RAIDICON       = bit.lshift(1, 13), -- ***
@@ -33,6 +33,7 @@ TGU.FLAGS = {
     ROLE           = bit.lshift(1, 23), -- ***
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
+    COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
 }
 
 -- Map names in the set "UPDATE_FOO" to the bit TGU.FLAGS.FOO.
@@ -58,6 +59,7 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS,
+    TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.THREAT)
 TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.POWER,
@@ -71,7 +73,6 @@ TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.TAPPED,
     TGU.FLAGS.ISVISIBLE,
     TGU.FLAGS.INHEALINGRANGE,
-    TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.ROLE,
     TGU.FLAGS.EXISTS,
@@ -89,7 +90,8 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.HEALTH,
     TGU.FLAGS.LEVEL,
     TGU.FLAGS.BUFFS,
-    TGU.FLAGS.DEBUFFS)
+    TGU.FLAGS.DEBUFFS,
+    TGU.FLAGS.COMBAT_SPELL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.POWER,
     TGU.FLAGS.COMBOPOINTS,
@@ -267,6 +269,18 @@ TGU.LIVING_GHOST = 2      -- Unit is a ghost
 TGU.TAPPED_NONE   = 0     -- Unit is not tapped
 TGU.TAPPED_PLAYER = 1     -- Unit is tapped by the player
 TGU.TAPPED_OTHER  = 2     -- Unit is tapped by someone else
+
+-- List of spell IDs that are channeled.  These are used to generate a list of
+-- channeled spell names used when parsing the combat log.
+TGU.CHANNELED_SPELL_IDS = {
+    746, 13278, 20577, 10797, 16430, 24323, 27640, 7290, 24322, 27177, 17401,
+    740, 20687, 6197, 1002, 1510, 136, 5143, 7268, 10, 12051, 15407, 2096, 605,
+    126, 689, 5138, 1120, 5740, 1949, 755, 17854, 6358,
+}
+TGU.CHANNELED_SPELL_NAME_TO_ID = {}
+for _, id in ipairs(TGU.CHANNELED_SPELL_IDS) do
+    TGU.CHANNELED_SPELL_NAME_TO_ID[GetSpellInfo(id)] = id
+end
 
 -- This is a template unit, used when the template editor is open so that the
 -- user can see various made-up stats.
