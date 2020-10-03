@@ -41,6 +41,26 @@ function TGTestObject:UPDATE_ISPLAYERTARGET(unit)
     end
 end
 
+function TGTestObject:UPDATE_BUFFS(unit)
+    local buffStr = unit.id..":buffs are now ["
+    for _, buff in ipairs(unit.buffs) do
+        if buff.name then
+            buffStr = buffStr..buff.name.."("..tostring(buff.auraType).."), "
+        end
+    end
+    TGDbg(buffStr.."]")
+end
+
+function TGTestObject:UPDATE_DEBUFFS(unit)
+    local debuffStr = unit.id..":debuffs are now ["
+    for _, debuff in ipairs(unit.debuffs) do
+        if debuff.name then
+            debuffStr = debuffStr..debuff.name.."("..tostring(debuff.auraType).."), "
+        end
+    end
+    TGDbg(debuffStr.."]")
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
