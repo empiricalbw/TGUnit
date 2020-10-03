@@ -340,6 +340,17 @@ function TGUnit:Poll_DEBUFFS()
                                     TGU.FLAGS.DEBUFFS)
 end
 
+-- Update the in-combat property and return a flag if it changed.
+function TGUnit:Poll_COMBAT()
+    local combat = UnitAffectingCombat(self.id)
+    if combat ~= self.combat then
+        self.combat = combat
+        return TGU.FLAGS.COMBAT
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -375,6 +386,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.DEBUFFS) then
         changedFlags = bit.bor(changedFlags, self:Poll_DEBUFFS())
+    end
+    if btst(flags, TGU.FLAGS.COMBAT) then
+        changedFlags = bit.bor(changedFlags, self:Poll_COMBAT())
     end
 
     -- Notify listeners.
@@ -537,6 +551,26 @@ function TGUnit.UNIT_AURA(unitId)
         TGDbg("UNIT_AURA unitId "..unitId)
         unit:NotifyListeners(unit:Poll_BUFFS())
         unit:NotifyListeners(unit:Poll_DEBUFFS())
+    end
+end
+
+-- Handle PLAYER_REGEN_DISABLED.  This fires when we enter combat.  Do not use
+-- PLAYER_ENTER_COMBAT for this which just checks if auto-attack is on.
+function TGUnit.PLAYER_REGEN_DISABLED()
+    local unit = TGUnit.unitList["player"]
+    if unit ~= nil then
+        TGDbg("PLAYER_REGEN_DISABLED")
+        unit:NotifyListeners(unit:Poll_COMBAT())
+    end
+end
+
+-- Handle PLAYER_REGEN_ENABLED.  This fires when we leave combat.  Do not use
+-- PLAYER_LEAVE_COMBAT for this which just checks if auto-attack is off.
+function TGUnit.PLAYER_REGEN_ENABLED()
+    local unit = TGUnit.unitList["player"]
+    if unit ~= nil then
+        TGDbg("PLAYER_REGEN_ENABLED")
+        unit:NotifyListeners(unit:Poll_COMBAT())
     end
 end
 
