@@ -32,10 +32,10 @@ end
 -- Instantiate a new TGUnit.  If the unit already exists, return it instead.
 function TGUnit:new(id)
     assert(id)
-    if (id == "template") then
+    if id == "template" then
         return TGU.TEMPLATE_UNIT
     end
-    if (TGUnit.unitList[id]) then
+    if TGUnit.unitList[id] then
         return TGUnit.unitList[id]
     end
 
@@ -88,7 +88,7 @@ function TGUnit:TGUnit(id)
         self.debuffs.debuff[i] = {}
     end
 
-    if (id ~= "target" and string.find(id,"^target")) then
+    if id ~= "target" and string.find(id,"^target") then
         TGUnit:new("target").indirectUnits[self] = self
     end
 
@@ -190,7 +190,7 @@ function TGUnit:Poll_HEALTH()
         max     = UnitHealthMax(self.id)
     end
 
-    if (self.health.current == current and self.health.max == max) then
+    if self.health.current == current and self.health.max == max then
         return 0
     end
 
@@ -216,7 +216,8 @@ function TGUnit:Poll_POWER()
 
     if (self.power.current == current and
         self.power.max == max and
-        self.power.type == typ) then
+        self.power.type == typ)
+    then
         return 0
     end
 
