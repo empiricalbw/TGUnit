@@ -77,15 +77,16 @@ function TGUnit:TGUnit(id)
     self.inHealingRange = nil
     self.threat         = {isTanking=nil,status=nil,threatPct=nil,
                            rawThreatPct=nil,threatValue=nil}
-    self.buffs          = {count=0,buff={}}
-    self.debuffs        = {count=0,debuff={}}
+    self.buffs          = {}
+    self.buffCounts     = {Magic=0,Curse=0,Disease=0,Posion=0}
+    self.debuffs        = {}
     self.debuffCounts   = {Magic=0,Curse=0,Disease=0,Poison=0}
     self.indirectUnits  = {}
     self.listeners      = {}
 
     for i=1,32 do
-        self.buffs.buff[i]     = {}
-        self.debuffs.debuff[i] = {}
+        self.buffs[i]   = {}
+        self.debuffs[i] = {}
     end
 
     if id ~= "target" and string.find(id,"^target") then
@@ -257,6 +258,88 @@ function TGUnit:Poll_ISPLAYERTARGET()
     return TGU.FLAGS.ISPLAYERTARGET
 end
 
+-- Poll the set of auras using the specified filter and return a bitmask of any
+-- that have changed.  Also return a flag if any counts have changed.
+local auraCountsCache = {Magic=0,Curse=0,Disease=0,Poison=0};
+function TGUnit:PollAuras(auras, auraCounts, filter)
+    -- UnitAura() returns nil if the unit doesn't exist or the aura doesn't
+    -- exist.
+    local changedAuras = 0
+    auraCountsCache.Magic   = 0
+    auraCountsCache.Curse   = 0
+    auraCountsCache.Disease = 0
+    auraCountsCache.Poison  = 0
+    for i, aura in ipairs(auras) do
+        name,
+        texture,
+        applications,
+        auraType,
+        duration,
+        expirationTime = UnitAura(self.id, i, filter)
+
+        if (aura.name           ~= name or
+            aura.texture        ~= texture or
+            aura.applications   ~= applications or
+            aura.auraType       ~= auraType or
+            aura.duration       ~= duration or
+            aura.expirationTime ~= expirationTime)
+        then
+            aura.name           = name
+            aura.texture        = texture
+            aura.applications   = applications
+            aura.auraType       = auraType
+            aura.duration       = duration
+            aura.expirationTime = expirationTime
+            changedAuras        = bit.bor(changedAuras, bit.lshift(1, i))
+
+            -- Auras such as "Well Fed" or "Blood Pact" have types of nil.  It
+            -- could also be nil if the aura just doesn't exist.
+            if aura.auraType ~= nil then
+                auraCountsCache[auraType] = auraCountsCache[auraType] + 1
+            end
+        end
+    end
+
+    local changedAuraCounts = (auraCounts.Magic   ~= auraCountsCache.Magic or
+                               auraCounts.Curse   ~= auraCountsCache.Curse or
+                               auraCounts.Disease ~= auraCountsCache.Disease or
+                               auraCounts.Poison  ~= auraCountsCache.Poison)
+    if changedAuraCounts then
+        auraCounts.Magic   = auraCountsCache.Magic
+        auraCounts.Curse   = auraCountsCache.Curse
+        auraCounts.Disease = auraCountsCache.Disease
+        auraCounts.Poison  = auraCountsCache.Poison
+    end
+
+    return changedAuras, changedAuraCounts
+end
+
+function TGUnit:PollAurasSimplified(auras, auraCounts, filter, flag)
+    local changedAuras
+    local changedAuraCounts
+
+    changedAuras,
+    changedAuraCounts = self:PollAuras(auras, auraCounts, filter)
+
+    if changedAuras ~= 0 or changedAuraCounts then
+        return flag
+    end
+
+    return 0
+end
+
+-- Update buffs and return a bitmask of all buffs that have changed.
+function TGUnit:Poll_BUFFS()
+    return self:PollAurasSimplified(self.buffs, self.buffCounts, "HELPFUL",
+                                    TGU.FLAGS.BUFFS)
+end
+
+-- Update debuffs and return a bitmask of all debuffs that have changed.
+function TGUnit:Poll_DEBUFFS()
+    return self:PollAurasSimplified(self.debuffs, self.debuffCounts, "HARMFUL",
+                                    TGU.FLAGS.DEBUFFS)
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -286,6 +369,12 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.ISPLAYERTARGET) then
         changedFlags = bit.bor(changedFlags, self:Poll_ISPLAYERTARGET())
+    end
+    if btst(flags, TGU.FLAGS.BUFFS) then
+        changedFlags = bit.bor(changedFlags, self:Poll_BUFFS())
+    end
+    if btst(flags, TGU.FLAGS.DEBUFFS) then
+        changedFlags = bit.bor(changedFlags, self:Poll_DEBUFFS())
     end
 
     -- Notify listeners.
@@ -437,6 +526,17 @@ function TGUnit.GROUP_ROSTER_UPDATE()
                 unit:Poll(unit.allFlags)
             end
         end
+    end
+end
+
+-- Handle UNIT_AURA event.  This fires when a buff or debuff on the unit id
+-- changes.
+function TGUnit.UNIT_AURA(unitId)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGDbg("UNIT_AURA unitId "..unitId)
+        unit:NotifyListeners(unit:Poll_BUFFS())
+        unit:NotifyListeners(unit:Poll_DEBUFFS())
     end
 end
 
