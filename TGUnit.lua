@@ -20,6 +20,10 @@ TGUnit.tguFrame = nil
 -- The time at which we entered the world.
 TGUnit.enteredWorldTime = nil
 
+-- A mapping of roster (party and raid unit ids) to GUIDs, uniquely identifying
+-- members of the raid and party.
+TGUnit.rosterGUIDs = {}
+
 -- Utility function for bitmasks.
 local function btst(mask1,mask2)
     return bit.band(mask1,mask2) ~= 0
@@ -413,6 +417,25 @@ function TGUnit.UNIT_PET(unitId)
     if petUnit ~= nil then
         TGDbg("UNIT_PET unitId "..unitId)
         petUnit:Poll(petUnit.allFlags)
+    end
+end
+
+-- Handle GROUP_ROSTER_UPDATE event.  This fires when we join a group and when
+-- other members join or leave the group or raid.  We maintain a cache that
+-- maps roster unit ids to GUIDs and when this event fires we compare the
+-- current mapping with the cached mapping and fully poll any roster unit ids
+-- that have mismatched GUIDs since those slots are now different or gone.
+function TGUnit.GROUP_ROSTER_UPDATE()
+    for _, unitId in ipairs(TGU.ROSTER) do
+        -- Note: UnitGUID returns nil if the unit doesn't exist.
+        local guid = UnitGUID(unitId)
+        if guid ~= TGUnit.rosterGUIDs[unitId] then
+            TGUnit.rosterGUIDs[unitId] = guid
+            local unit = TGUnit.unitList[unitId]
+            if unit ~= nil then
+                unit:Poll(unit.allFlags)
+            end
+        end
     end
 end
 
