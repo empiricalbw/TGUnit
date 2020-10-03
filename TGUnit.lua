@@ -183,8 +183,7 @@ end
 -- current and max health here.
 function TGUnit:Poll_HEALTH()
     -- UnitHealth and UnitHealthMax both return 0 if the target is not set.
-    local current
-    local max
+    local current, max
 
     if self.exists then
         current = UnitHealth(self.id)
@@ -205,9 +204,7 @@ end
 function TGUnit:Poll_POWER()
     -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the target is
     -- not set.
-    local current
-    local max
-    local typ
+    local current, max, typ
 
     if self.exists then
         current = UnitPower(self.id)
@@ -315,11 +312,8 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
 end
 
 function TGUnit:PollAurasSimplified(auras, auraCounts, filter, flag)
-    local changedAuras
-    local changedAuraCounts
-
-    changedAuras,
-    changedAuraCounts = self:PollAuras(auras, auraCounts, filter)
+    local changedAuras, changedAuraCounts =
+        self:PollAuras(auras, auraCounts, filter)
 
     if changedAuras ~= 0 or changedAuraCounts then
         return flag
