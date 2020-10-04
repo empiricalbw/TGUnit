@@ -14,6 +14,22 @@ TGUnit.lastPoll = 0
 -- the same as the first.
 TGUnit.unitList = {}
 
+-- A mapping of unit GUIDs to a table of TGUnits keyed by TGUnit.  For
+-- instance you could have this if a player was targeting themselves:
+--
+--      TGUnit.guidList = {
+--          ["1234-5678-ABCD"] = {
+--              TGUnit("target") = TGUnit("target"),
+--              TGUnit("player") = TGUnit("player"),
+--          }
+--      }
+--
+-- This list is mainly used for parsing the combat log for spellcast started
+-- events.  Since the combat log doesn't include spellcast stop events, we just
+-- parse the start event and allow the client to "pulse" the spell name for a
+-- second or two.
+TGUnit.guidList = {}
+
 -- The frame that we will use to listen to events and updates.
 TGUnit.tguFrame = nil
 
@@ -166,6 +182,24 @@ function TGUnit:Poll_GUID()
     local guid = UnitGUID(self.id)
     if guid == self.guid then
         return 0
+    end
+
+    local guidUnits
+    if self.guid ~= nil then
+        guidUnits = TGUnit.guidList[self.guid]
+        guidUnits[self] = nil
+        if next(guidUnits) == nil then
+            TGUnit.guidList[self.guid] = nil
+        end
+    end
+
+    if guid ~= nil then
+        guidUnits = TGUnit.guidList[guid]
+        if guidUnits == nil then
+            guidUnits = {}
+            TGUnit.guidList[guid] = guidUnits
+        end
+        guidUnits[self] = self
     end
 
     self.guid = guid
@@ -577,6 +611,18 @@ end
 function TGUnit.PrintUnitList()
     for _, unit in pairs(TGUnit.unitList) do
         TGDbg(unit.id)
+    end
+end
+
+-- Debug function to print the guid list.
+function TGUnit.PrintGuidList()
+    for guid, guidUnits in pairs(TGUnit.guidList) do
+        local name = next(guidUnits).name
+        local str  = guid.." ("..name.."): "
+        for unit in pairs(guidUnits) do
+            str = str.." "..unit.id
+        end
+        TGDbg(str)
     end
 end
 
