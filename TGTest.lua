@@ -97,6 +97,10 @@ function TGTestObject:UPDATE_LEADER(unit)
     end
 end
 
+function TGTestObject:UPDATE_RAIDICON(unit)
+    TGDbg(unit.id..": raid icon is "..tostring(unit.raidIcon))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
