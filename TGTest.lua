@@ -101,6 +101,14 @@ function TGTestObject:UPDATE_RAIDICON(unit)
     TGDbg(unit.id..": raid icon is "..tostring(unit.raidIcon))
 end
 
+function TGTestObject:UPDATE_NPC(unit)
+    if unit.npc then
+        TGDbg(unit.id..": is an npc")
+    elseif unit.npc ~= nil then
+        TGDbg(unit.id..": is a pc")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
