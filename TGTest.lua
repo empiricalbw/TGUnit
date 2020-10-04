@@ -1,5 +1,9 @@
-TGTEST_UNIT_LIST = {"player", "pet",
-                    "party1", "partypet1"}
+TGTEST_UNIT_LIST = {"target",
+                    "player",
+                    "pet",
+                    "party1",
+                    "partypet1",
+                }
 
 TGTestObject = {}
 
