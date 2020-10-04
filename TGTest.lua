@@ -89,6 +89,14 @@ function TGTestObject:UPDATE_REACTION(unit)
     TGDbg(unit.id..": reaction is "..tostring(str))
 end
 
+function TGTestObject:UPDATE_LEADER(unit)
+    if unit.leader then
+        TGDbg(unit.id..": is group leader")
+    else
+        TGDbg(unit.id..": is not group leader")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
