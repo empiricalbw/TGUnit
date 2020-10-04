@@ -475,6 +475,17 @@ function TGUnit:Poll_REACTION()
     return 0
 end
 
+-- Update hte unit's leader status and return a flag if it changed.
+function TGUnit:Poll_LEADER()
+    local leader = UnitIsGroupLeader(self.id)
+    if leader ~= self.leader then
+        self.leader = leader
+        return TGU.FLAGS.LEADER
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -522,6 +533,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.REACTION) then
         changedFlags = bit.bor(changedFlags, self:Poll_REACTION())
+    end
+    if btst(flags, TGU.FLAGS.LEADER) then
+        changedFlags = bit.bor(changedFlags, self:Poll_LEADER())
     end
 
     -- Notify listeners.
@@ -704,6 +718,15 @@ function TGUnit.PLAYER_REGEN_ENABLED()
     if unit ~= nil then
         TGEvt("PLAYER_REGEN_ENABLED")
         unit:NotifyListeners(unit:Poll_COMBAT())
+    end
+end
+
+-- Handle PARTY_LEADER_CHANGED.  This fires when the leader changes, but it
+-- doesn't tell us anything about who the leader is so we have to poll
+-- everybody.
+function TGUnit.PARTY_LEADER_CHANGED()
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:NotifyListeners(unit:Poll_LEADER())
     end
 end
 
