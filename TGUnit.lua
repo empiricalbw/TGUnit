@@ -502,6 +502,22 @@ function TGUnit:Poll_RAIDICON()
     return 0
 end
 
+-- Update whether or not the unit is an npc.
+function TGUnit:Poll_NPC()
+    -- UnitIsPlayer returns false if the unit doesn't exist, so we do an
+    -- existence check first.
+    local npc
+    if self.exists then
+        npc = not UnitIsPlayer(self.id)
+    end
+    if npc ~= self.npc then
+        self.npc = npc
+        return TGU.FLAGS.NPC
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -555,6 +571,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.RAIDICON) then
         changedFlags = bit.bor(changedFlags, self:Poll_RAIDICON())
+    end
+    if btst(flags, TGU.FLAGS.NPC) then
+        changedFlags = bit.bor(changedFlags, self:Poll_NPC())
     end
 
     -- Notify listeners.
