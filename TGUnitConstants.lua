@@ -20,7 +20,7 @@ TGU.FLAGS = {
     PLAYER_SPELL   = bit.lshift(1, 10), -- Spell being cast by the player
     REACTION       = bit.lshift(1, 11), -- Friendly, neutral or hostile
     LEADER         = bit.lshift(1, 12), -- Unit is group or raid leader
-    RAIDICON       = bit.lshift(1, 13), -- ***
+    RAIDICON       = bit.lshift(1, 13), -- Unit's raid icon num or nil if none
     NPC            = bit.lshift(1, 14), -- ***
     CLASSIFICATION = bit.lshift(1, 15), -- ***
     PVPSTATUS      = bit.lshift(1, 16), -- ***
@@ -62,10 +62,10 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.DEBUFFS,
     TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.LEADER,
+    TGU.FLAGS.RAIDICON,
     TGU.FLAGS.THREAT)
 TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.REACTION,
-    TGU.FLAGS.RAIDICON,
     TGU.FLAGS.NPC,
     TGU.FLAGS.CLASSIFICATION,
     TGU.FLAGS.PVPSTATUS,
@@ -93,12 +93,12 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS,
     TGU.FLAGS.LEADER,
+    TGU.FLAGS.RAIDICON,
     TGU.FLAGS.COMBAT_SPELL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.COMBOPOINTS,
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.REACTION,
-    TGU.FLAGS.RAIDICON,
     TGU.FLAGS.NPC,
     TGU.FLAGS.CLASSIFICATION,
     TGU.FLAGS.PVPSTATUS,

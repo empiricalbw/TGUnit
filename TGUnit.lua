@@ -486,6 +486,22 @@ function TGUnit:Poll_LEADER()
     return 0
 end
 
+-- Update the unit's raid icon and return a flag if it changed.  According to
+-- wow.gamepedia, this can return random results for non-existent units, so we
+-- do an existence check first.
+function TGUnit:Poll_RAIDICON()
+    local raidIcon
+    if self.exists then
+        raidIcon = GetRaidTargetIndex(self.id)
+    end
+    if raidIcon ~= self.raidIcon then
+        self.raidIcon = raidIcon
+        return TGU.FLAGS.RAIDICON
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -536,6 +552,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.LEADER) then
         changedFlags = bit.bor(changedFlags, self:Poll_LEADER())
+    end
+    if btst(flags, TGU.FLAGS.RAIDICON) then
+        changedFlags = bit.bor(changedFlags, self:Poll_RAIDICON())
     end
 
     -- Notify listeners.
@@ -727,6 +746,16 @@ end
 function TGUnit.PARTY_LEADER_CHANGED()
     for _, unit in pairs(TGUnit.unitList) do
         unit:NotifyListeners(unit:Poll_LEADER())
+    end
+end
+
+-- Handle RAID_TARGET_UPDATE.  This fires when raid icons change and apparently
+-- also when players enter or leave the party.  It also apparently does not
+-- fire when a raid target dies even though the icon is automatically removed
+-- at that time.
+function TGUnit.RAID_TARGET_UPDATE()
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:NotifyListeners(unit:Poll_RAIDICON())
     end
 end
 
