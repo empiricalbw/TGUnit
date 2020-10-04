@@ -861,7 +861,15 @@ end
 -- also don't fire for the Warlock imp firebolt spell (and probably other
 -- spells) - even when we have the pet selected as our target while it is
 -- casting.
+--
+-- Quirk: If the unit is "target" and the target is "player", then we get these
+-- events for the "target" unit as well.  This may also be the case for other
+-- units.  We discard them if they aren't for the actual player unit.
 function TGUnit.HandleUnitSpellcastEvent(unitId, castGUID, spellID)
+    if unitId ~= "player" then
+        return
+    end
+
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
         unit:NotifyListeners(unit:Poll_PLAYER_SPELL())
