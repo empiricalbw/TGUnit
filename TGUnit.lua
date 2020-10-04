@@ -457,8 +457,7 @@ end
 function TGUnit:GetReaction()
     if not self.exists then
         return nil
-    end
-    if UnitIsFriend(self.id, "player") then
+    elseif UnitIsFriend(self.id, "player") then
         return TGU.REACTION_FRIENDLY
     elseif UnitIsEnemy(self.id, "player") then
         return TGU.REACTION_HOSTILE
