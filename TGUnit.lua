@@ -452,6 +452,29 @@ function TGUnit:Update_COMBAT_SPELL(timestamp, spell)
     return 0
 end
 
+-- Update the unit's reaction (friendly, neutral, hostile) and return a flag if
+-- it changed.
+function TGUnit:GetReaction()
+    if not self.exists then
+        return nil
+    end
+    if UnitIsFriend(self.id, "player") then
+        return TGU.REACTION_FRIENDLY
+    elseif UnitIsEnemy(self.id, "player") then
+        return TGU.REACTION_HOSTILE
+    end
+    return TGU.REACTION_NEUTRAL
+end
+function TGUnit:Poll_REACTION()
+    local reaction = self:GetReaction()
+    if reaction ~= self.reaction then
+        self.reaction = reaction
+        return TGU.FLAGS.REACTION
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -496,6 +519,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.COMBAT_SPELL) then
         changedFlags = bit.bor(changedFlags, self:Update_COMBAT_SPELL(nil, nil))
+    end
+    if btst(flags, TGU.FLAGS.REACTION) then
+        changedFlags = bit.bor(changedFlags, self:Poll_REACTION())
     end
 
     -- Notify listeners.
