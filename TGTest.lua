@@ -77,6 +77,18 @@ function TGTestObject:UPDATE_COMBAT_SPELL(unit)
     TGDbg(unit.id..": log cast is now "..tostring(unit.logCastInfo.spell))
 end
 
+function TGTestObject:UPDATE_REACTION(unit)
+    local str
+    if unit.reaction == TGU.REACTION_FRIENDLY then
+        str = "Friendly"
+    elseif unit.reaction == TGU.REACTION_NEUTRAL then
+        str = "Neutral"
+    elseif unit.reaction == TGU.REACTION_HOSTILE then
+        str = "Hostile"
+    end
+    TGDbg(unit.id..": reaction is "..tostring(str))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
