@@ -109,6 +109,12 @@ function TGTestObject:UPDATE_NPC(unit)
     end
 end
 
+function TGTestObject:UPDATE_CLASSIFICATION(unit)
+    if unit.classification ~= nil then
+        TGDbg(unit.id..": classification is "..unit.classification)
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
