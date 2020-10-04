@@ -22,7 +22,7 @@ TGU.FLAGS = {
     LEADER         = bit.lshift(1, 12), -- Unit is group or raid leader
     RAIDICON       = bit.lshift(1, 13), -- Unit's raid icon num or nil if none
     NPC            = bit.lshift(1, 14), -- Unit is an NPC.
-    CLASSIFICATION = bit.lshift(1, 15), -- ***
+    CLASSIFICATION = bit.lshift(1, 15), -- Rare, elite, worldboss, etc.
     PVPSTATUS      = bit.lshift(1, 16), -- ***
     LIVING         = bit.lshift(1, 17), -- ***
     TAPPED         = bit.lshift(1, 18), -- ***
@@ -242,18 +242,13 @@ TGU.REACTION_NEUTRAL  = 1 -- Unit is "yellow", won't aggro unless attacked
 TGU.REACTION_HOSTILE  = 2 -- Unit is "red", will aggro
 
 -- List of classification types.
-TGU.CLASSIFICATION_NORMAL     = 0 -- Nothing special
-TGU.CLASSIFICATION_RARE       = 1 -- Rare!
-TGU.CLASSIFICATION_ELITE      = 2
-TGU.CLASSIFICATION_RARE_ELITE = 3
-TGU.CLASSIFICATION_BOSS       = 4
-TGU.STRING_TO_CLASSIFICATION_TABLE = {
-    ["normal"]    = TGU.CLASSIFICATION_NORMAL,
-    ["rare"]      = TGU.CLASSIFICATION_RARE,
-    ["elite"]     = TGU.CLASSIFICATION_ELITE,
-    ["rareelite"] = TGU.CLASSIFICATION_RARE_ELITE,
-    ["worldboss"] = TGU.CLASSIFICATION_BOSS
-}
+TGU.CLASSIFICATION_MINUS      = "minus"
+TGU.CLASSIFICATION_TRIVIAL    = "trivial"
+TGU.CLASSIFICATION_NORMAL     = "normal"
+TGU.CLASSIFICATION_RARE       = "rare"
+TGU.CLASSIFICATION_ELITE      = "elite"
+TGU.CLASSIFICATION_RARE_ELITE = "rareelite"
+TGU.CLASSIFICATION_BOSS       = "worldboss"
 
 -- List of PVP types.
 TGU.PVP_NONE        = 0   -- Not flagged

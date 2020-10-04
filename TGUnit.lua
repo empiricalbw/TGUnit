@@ -518,6 +518,20 @@ function TGUnit:Poll_NPC()
     return 0
 end
 
+-- Update the unit classification (normal, rare, elite, worldboss, etc).
+function TGUnit:Poll_CLASSIFICATION()
+    -- UnitClassification returns "normal" if the unit doesn't exist, so we do
+    -- an existence check first.
+    local classification
+    if self.exists then
+        classification = UnitClassification(self.id)
+    end
+    if classification ~= self.classification then
+        self.classification = classification
+        return TGU.FLAGS.CLASSIFICATION
+    end
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -574,6 +588,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.NPC) then
         changedFlags = bit.bor(changedFlags, self:Poll_NPC())
+    end
+    if btst(flags, TGU.FLAGS.CLASSIFICATION) then
+        changedFlags = bit.bor(changedFlags, self:Poll_CLASSIFICATION())
     end
 
     -- Notify listeners.
