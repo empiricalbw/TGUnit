@@ -571,6 +571,27 @@ function TGUnit:Poll_AFKSTATUS()
     return 0
 end
 
+-- Update the living status.
+function TGUnit:GetLivingStatus()
+    if not self.exists then
+        return nil
+    elseif UnitIsGhost(self.id) then
+        return TGU.LIVING_GHOST
+    elseif UnitIsDead(self.id) then
+        return TGU.LIVING_DEAD
+    end
+    return TGU.LIVING_ALIVE
+end
+function TGUnit:Poll_LIVING()
+    local living = self:GetLivingStatus()
+    if living ~= self.living then
+        self.living = living
+        return TGU.FLAGS.LIVING
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -636,6 +657,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.AFKSTATUS) then
         changedFlags = bit.bor(changedFlags, self:Poll_AFKSTATUS())
+    end
+    if btst(flags, TGU.FLAGS.LIVING) then
+        changedFlags = bit.bor(changedFlags, self:Poll_LIVING())
     end
 
     -- Notify listeners.
