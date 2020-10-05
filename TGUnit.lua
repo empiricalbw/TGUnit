@@ -53,6 +53,85 @@ local function TGEvt(str)
     --TGDbg(str)
 end
 
+-- Meta-getters for many unit properties we care about.
+local function UnitIsPlayerTarget(unitId)
+    return UnitIsUnit(unitId, "target")
+end
+
+local function UnitGetReaction(unitId)
+    if UnitIsFriend(unitId, "player") then
+        return TGU.REACTION_FRIENDLY
+    elseif UnitIsEnemy(unitId, "player") then
+        return TGU.REACTION_HOSTILE
+    end
+    return TGU.REACTION_NEUTRAL
+end
+
+local function UnitIsNPC(unitId)
+    return not UnitIsPlayer(unitId)
+end
+
+local function UnitGetPVPStatus(unitId)
+    -- These return false if the unit doesn't exist, so we do an existence
+    -- check first.
+    if UnitIsPVPFreeForAll(unitId) then
+        return TGU.PVP_FFA_FLAGGED
+    elseif UnitIsPVP(unitId) then
+        return TGU.PVP_FLAGGED
+    end
+    return TGU.PVP_NONE
+end
+
+local function UnitGetLivingStatus(unitId)
+    if UnitIsGhost(unitId) then
+        return TGU.LIVING_GHOST
+    elseif UnitIsDead(unitId) then
+        return TGU.LIVING_DEAD
+    end
+    return TGU.LIVING_ALIVE
+end
+
+local function UnitGetIsVisible(unitId)
+    return UnitIsVisible(unitId) == true
+end
+
+local function UnitGetInHealingRange(unitId)
+    if not TGUnit.healingRangeSpell then
+        return nil
+    end
+
+    return IsSpellInRange(TGUnit.healingRangeSpell, unitId) == 1
+end
+
+-- The set of standard-poll properties.  These don't require any special per-
+-- property logic and therefore can all be generated programatically.  Other
+-- properties that require more logic are special-cased later.
+local TGUNIT_STANDARD_PROPERTIES = {
+    {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
+    {"NAME",            "name",             UnitName},
+    {"CLASS",           "class",            UnitClass},
+    {"LEVEL",           "level",            UnitLevel},
+    {"COMBAT",          "combat",           UnitAffectingCombat},
+    {"REACTION",        "reaction",         UnitGetReaction},
+    {"LEADER",          "leader",           UnitIsGroupLeader},
+    {"RAIDICON",        "raidIcon",         GetRaidTargetIndex},
+    {"NPC",             "npc",              UnitIsNPC},
+    {"CLASSIFICATION",  "classification",   UnitClassification},
+    {"PVPSTATUS",       "pvpStatus",        UnitGetPVPStatus},
+    {"AFKSTATUS",       "afkStatus",        UnitIsAFK},
+    {"LIVING",          "living",           UnitGetLivingStatus},
+    {"TAPPED",          "tapped",           UnitIsTapDenied},
+    {"ISVISIBLE",       "isVisible",        UnitGetIsVisible},
+    {"INHEALINGRANGE",  "inHealingRange",   UnitGetInHealingRange},
+    {"CREATURETYPE",    "creatureType",     UnitCreatureType},
+}
+for _, prop in ipairs(TGUNIT_STANDARD_PROPERTIES) do
+    local flag, field, getter = unpack(prop)
+    TGUnit["Poll_"..flag] = function(self)
+        return self:StandardPoll(TGU.FLAGS[flag], field, getter)
+    end
+end
+
 -- Instantiate a new TGUnit.  If the unit already exists, return it instead.
 function TGUnit:new(id)
     assert(id)
@@ -169,6 +248,20 @@ function TGUnit:NotifyListeners(changedFlags)
     end
 end
 
+-- Do a standard poll operation.
+function TGUnit:StandardPoll(flag, field, func)
+    local val
+    if self.exists then
+        val = func(self.id)
+    end
+    if val ~= self[field] then
+        self[field] = val
+        return flag
+    end
+
+    return 0
+end
+
 -- Update the existence property and return a flag if it changed.
 function TGUnit:Poll_EXISTS()
     local exists = UnitExists(self.id)
@@ -208,25 +301,6 @@ function TGUnit:Poll_GUID()
 
     self.guid = guid
     return TGU.FLAGS.GUID
-end
-
--- Do a standard poll operation.
-function TGUnit:StandardPoll(flag, field, func)
-    local val
-    if self.exists then
-        val = func(self.id)
-    end
-    if val ~= self[field] then
-        self[field] = val
-        return flag
-    end
-
-    return 0
-end
-
--- Update the name property and return a flag if it changed.
-function TGUnit:Poll_NAME()
-    return self:StandardPoll(TGU.FLAGS.NAME, "name", UnitName)
 end
 
 -- Update the health property and return a flag if it changed.  We update both
@@ -273,20 +347,6 @@ function TGUnit:Poll_POWER()
     self.power.current = current
     self.power.max     = max
     return TGU.FLAGS.POWER
-end
-
--- Update the level property and return a flag if it changed.
-function TGUnit:Poll_LEVEL()
-    return self:StandardPoll(TGU.FLAGS.LEVEL, "level", UnitLevel)
-end
-
--- Update the "is player target" property and return a flag if it changed.
-local function UnitIsPlayerTarget(unitId)
-    return UnitIsUnit(unitId, "target")
-end
-function TGUnit:Poll_ISPLAYERTARGET()
-    return self:StandardPoll(TGU.FLAGS.ISPLAYERTARGET, "isPlayerTarget",
-                             UnitIsPlayerTarget)
 end
 
 -- Poll the set of auras using the specified filter and return a bitmask of any
@@ -368,11 +428,6 @@ function TGUnit:Poll_DEBUFFS()
                                     TGU.FLAGS.DEBUFFS)
 end
 
--- Update the in-combat property and return a flag if it changed.
-function TGUnit:Poll_COMBAT()
-    return self:StandardPoll(TGU.FLAGS.COMBAT, "combat", UnitAffectingCombat)
-end
-
 -- Update the player's spellcast.  In Classic, only the player's spellcast can
 -- be queried programatically.  We do receive events in the combat log for when
 -- other units start casting and if their casts caused damage but we don't get
@@ -439,110 +494,8 @@ function TGUnit:Update_COMBAT_SPELL(timestamp, spell)
 
     return 0
 end
-
--- Update the unit's reaction (friendly, neutral, hostile) and return a flag if
--- it changed.
-local function UnitGetReaction(unitId)
-    if UnitIsFriend(unitId, "player") then
-        return TGU.REACTION_FRIENDLY
-    elseif UnitIsEnemy(unitId, "player") then
-        return TGU.REACTION_HOSTILE
-    end
-    return TGU.REACTION_NEUTRAL
-end
-function TGUnit:Poll_REACTION()
-    return self:StandardPoll(TGU.FLAGS.REACTION, "reaction", UnitGetReaction)
-end
-
--- Update hte unit's leader status and return a flag if it changed.
-function TGUnit:Poll_LEADER()
-    return self:StandardPoll(TGU.FLAGS.LEADER, "leader", UnitIsGroupLeader)
-end
-
--- Update the unit's raid icon and return a flag if it changed.  According to
--- wow.gamepedia, this can return random results for non-existent units, so we
--- do an existence check first.
-function TGUnit:Poll_RAIDICON()
-    return self:StandardPoll(TGU.FLAGS.RAIDICON, "raidIcon", GetRaidTargetIndex)
-end
-
--- Update whether or not the unit is an npc.
-local function UnitIsNPC(unitId)
-    return not UnitIsPlayer(unitId)
-end
-function TGUnit:Poll_NPC()
-    return self:StandardPoll(TGU.FLAGS.NPC, "npc", UnitIsNPC)
-end
-
--- Update the unit classification (normal, rare, elite, worldboss, etc).
-function TGUnit:Poll_CLASSIFICATION()
-    return self:StandardPoll(TGU.FLAGS.CLASSIFICATION, "classification",
-                             UnitClassification)
-end
-
--- Update the PVP state.
-local function UnitGetPVPStatus(unitId)
-    -- These return false if the unit doesn't exist, so we do an existence
-    -- check first.
-    if UnitIsPVPFreeForAll(unitId) then
-        return TGU.PVP_FFA_FLAGGED
-    elseif UnitIsPVP(unitId) then
-        return TGU.PVP_FLAGGED
-    end
-    return TGU.PVP_NONE
-end
-function TGUnit:Poll_PVPSTATUS()
-    return self:StandardPoll(TGU.FLAGS.PVPSTATUS, "pvpStatus", UnitGetPVPStatus)
-end
-
--- Update the AFK state.
-function TGUnit:Poll_AFKSTATUS()
-    return self:StandardPoll(TGU.FLAGS.AFKSTATUS, "afkStatus", UnitIsAFK)
-end
-
--- Update the living status.
-local function UnitGetLivingStatus(unitId)
-    if UnitIsGhost(unitId) then
-        return TGU.LIVING_GHOST
-    elseif UnitIsDead(unitId) then
-        return TGU.LIVING_DEAD
-    end
-    return TGU.LIVING_ALIVE
-end
-function TGUnit:Poll_LIVING()
-    return self:StandardPoll(TGU.FLAGS.LIVING, "living", UnitGetLivingStatus)
-end
-
--- Update the tapped status.
-function TGUnit:Poll_TAPPED()
-    return self:StandardPoll(TGU.FLAGS.TAPPED, "tapped", UnitIsTapDenied)
-end
-
--- Update the visibility status.
-local function UnitGetIsVisible(unitId)
-    return UnitIsVisible(unitId) == true
-end
-function TGUnit:Poll_ISVISIBLE()
-    return self:StandardPoll(TGU.FLAGS.ISVISIBLE, "isVisible", UnitGetIsVisible)
-end
-
--- Update the healing range status.
-local function UnitGetInHealingRange(unitId)
-    if not TGUnit.healingRangeSpell then
-        return nil
-    end
-
-    return IsSpellInRange(TGUnit.healingRangeSpell, unitId) == 1
-end
-function TGUnit:Poll_INHEALINGRANGE()
-    return self:StandardPoll(TGU.FLAGS.INHEALINGRANGE, "inHealingRange",
-                             UnitGetInHealingRange)
-end
-
--- Update the creature type.
-function TGUnit:Poll_CREATURETYPE()
-    return self:StandardPoll(TGU.FLAGS.CREATURETYPE, "creatureType",
-                             UnitCreatureType)
+function TGUnit:Poll_COMBAT_SPELL()
+    return self:Update_COMBAT_SPELL(nil, nil)
 end
 
 -- Update threat.
@@ -578,81 +531,18 @@ function TGUnit:Poll(flags)
     flags = flags or self.pollFlags
 
     -- The set of flags that changed and therefore require update calls.  We
-    -- initially populate this with the unconditional existence check.
+    -- initially populate this with the unconditional existence check since
+    -- many others rely on it being up to date.
     local changedFlags = self:Poll_EXISTS()
 
     -- Update everything.
-    if btst(flags, TGU.FLAGS.GUID) then
-        changedFlags = bit.bor(changedFlags, self:Poll_GUID())
-    end
-    if btst(flags, TGU.FLAGS.NAME) then
-        changedFlags = bit.bor(changedFlags, self:Poll_NAME())
-    end
-    if btst(flags, TGU.FLAGS.HEALTH) then
-        changedFlags = bit.bor(changedFlags, self:Poll_HEALTH())
-    end
-    if btst(flags, TGU.FLAGS.POWER) then
-        changedFlags = bit.bor(changedFlags, self:Poll_POWER())
-    end
-    if btst(flags, TGU.FLAGS.LEVEL) then
-        changedFlags = bit.bor(changedFlags, self:Poll_LEVEL())
-    end
-    if btst(flags, TGU.FLAGS.ISPLAYERTARGET) then
-        changedFlags = bit.bor(changedFlags, self:Poll_ISPLAYERTARGET())
-    end
-    if btst(flags, TGU.FLAGS.BUFFS) then
-        changedFlags = bit.bor(changedFlags, self:Poll_BUFFS())
-    end
-    if btst(flags, TGU.FLAGS.DEBUFFS) then
-        changedFlags = bit.bor(changedFlags, self:Poll_DEBUFFS())
-    end
-    if btst(flags, TGU.FLAGS.COMBAT) then
-        changedFlags = bit.bor(changedFlags, self:Poll_COMBAT())
-    end
-    if btst(flags, TGU.FLAGS.PLAYER_SPELL) then
-        changedFlags = bit.bor(changedFlags, self:Poll_PLAYER_SPELL())
-    end
-    if btst(flags, TGU.FLAGS.COMBAT_SPELL) then
-        changedFlags = bit.bor(changedFlags, self:Update_COMBAT_SPELL(nil, nil))
-    end
-    if btst(flags, TGU.FLAGS.REACTION) then
-        changedFlags = bit.bor(changedFlags, self:Poll_REACTION())
-    end
-    if btst(flags, TGU.FLAGS.LEADER) then
-        changedFlags = bit.bor(changedFlags, self:Poll_LEADER())
-    end
-    if btst(flags, TGU.FLAGS.RAIDICON) then
-        changedFlags = bit.bor(changedFlags, self:Poll_RAIDICON())
-    end
-    if btst(flags, TGU.FLAGS.NPC) then
-        changedFlags = bit.bor(changedFlags, self:Poll_NPC())
-    end
-    if btst(flags, TGU.FLAGS.CLASSIFICATION) then
-        changedFlags = bit.bor(changedFlags, self:Poll_CLASSIFICATION())
-    end
-    if btst(flags, TGU.FLAGS.PVPSTATUS) then
-        changedFlags = bit.bor(changedFlags, self:Poll_PVPSTATUS())
-    end
-    if btst(flags, TGU.FLAGS.AFKSTATUS) then
-        changedFlags = bit.bor(changedFlags, self:Poll_AFKSTATUS())
-    end
-    if btst(flags, TGU.FLAGS.LIVING) then
-        changedFlags = bit.bor(changedFlags, self:Poll_LIVING())
-    end
-    if btst(flags, TGU.FLAGS.TAPPED) then
-        changedFlags = bit.bor(changedFlags, self:Poll_TAPPED())
-    end
-    if btst(flags, TGU.FLAGS.ISVISIBLE) then
-        changedFlags = bit.bor(changedFlags, self:Poll_ISVISIBLE())
-    end
-    if btst(flags, TGU.FLAGS.INHEALINGRANGE) then
-        changedFlags = bit.bor(changedFlags, self:Poll_INHEALINGRANGE())
-    end
-    if btst(flags, TGU.FLAGS.CREATURETYPE) then
-        changedFlags = bit.bor(changedFlags, self:Poll_CREATURETYPE())
-    end
-    if btst(flags, TGU.FLAGS.THREAT) then
-        changedFlags = bit.bor(changedFlags, self:Poll_THREAT())
+    flags = bit.band(flags, bit.bnot(TGU.FLAGS.EXISTS))
+    for flagName, bitmask in pairs(TGU.FLAGS) do
+        if btst(flags, bitmask) then
+            assert(bitmask ~= TGU.FLAGS.EXISTS)
+            changedFlags = bit.bor(changedFlags,
+                                   TGUnit["Poll_"..flagName](self))
+        end
     end
 
     -- Notify listeners.
