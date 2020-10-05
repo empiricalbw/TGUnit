@@ -438,6 +438,12 @@ function TGUnit:Poll_DEBUFFS()
                                     TGU.FLAGS.DEBUFFS)
 end
 
+-- Update all auras.
+function TGUnit:HandleAurasChanged()
+    return bit.bor(self:Poll_BUFFS(),
+                   self:Poll_DEBUFFS())
+end
+
 -- Update the player's spellcast.  In Classic, only the player's spellcast can
 -- be queried programatically.  We do receive events in the combat log for when
 -- other units start casting and if their casts caused damage but we don't get
@@ -533,6 +539,21 @@ function TGUnit:Poll_THREAT()
     return 0
 end
 
+-- Update player flags.  This include at least PVP, AFK, DND.
+function TGUnit:HandlePlayerFlagsChanged()
+    return bit.bor(self:Poll_PVPSTATUS(),
+                   self:Poll_AFKSTATUS())
+end
+
+-- Standard event handler for events that just need to call one method and
+-- notify listeners.
+function TGUnit.StandardEvent(unitId, func)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        unit:NotifyListeners(func(unit))
+    end
+end
+
 -- Handle PLAYER_ENTERING_WORLD event.
 function TGUnit.PLAYER_ENTERING_WORLD()
     -- Record when we entered the world.
@@ -575,74 +596,6 @@ function TGUnit.PLAYER_TARGET_CHANGED()
     end
 end
 
--- Handle UNIT_NAME_UPDATE event.  This is typically invoked if the unit's name
--- changes after the unit initially came into existence and is not invoked for
--- example when you change targets to a target with a new name.
-function TGUnit.UNIT_NAME_UPDATE(unitId)
-    TGEvt("UNIT_NAME_UPDATE unitId "..unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        unit:NotifyListeners(unit:Poll_NAME())
-    end
-end
-
--- Handle UNIT_HEALTH_FREQUENT event.
-function TGUnit.UNIT_HEALTH_FREQUENT(unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_HEALTH_UPDATE unitId "..unitId)
-        unit:NotifyListeners(unit:Poll_HEALTH())
-    end
-end
-
--- Handle UNIT_MAXHEALTH event.
-function TGUnit.UNIT_MAXHEALTH(unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_MAXHEALTH unitId "..unitId)
-        unit:NotifyListeners(unit:Poll_HEALTH())
-    end
-end
-
--- Handle UNIT_POWER_FREQUENT event.  This updates the current power (mana,
--- rage, energy, etc) amount and can tick frequently.  On Classic, this appears
--- to tick only every couple of seconds, but it gets called twice for each of
--- those ticks in rapid succession.
-function TGUnit.UNIT_POWER_FREQUENT(unitId, powerType)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_POWER_UPDATE unitId "..unitId.." powerType "..powerType)
-        unit:NotifyListeners(unit:Poll_POWER())
-    end
-end
-
--- Handle UNIT_MAXPOWER event.
-function TGUnit.UNIT_MAXPOWER(unitId, powerType)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_MAXPOWER unitId "..unitId.." powerType "..powerType)
-        unit:NotifyListeners(unit:Poll_POWER())
-    end
-end
-
--- Handle UNIT_DISPLAYPOWER event.
-function TGUnit.UNIT_DISPLAYPOWER(unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_DISPLAYPOWER unitId "..unitId)
-        unit:NotifyListeners(unit:Poll_POWER())
-    end
-end
-
--- Handle UNIT_LEVEL event.
-function TGUnit.UNIT_LEVEL(unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_LEVEL unitId "..unitId)
-        unit:NotifyListeners(unit:Poll_LEVEL())
-    end
-end
-
 -- Handle UNIT_PET event.  This fires when a unit's pet changes (is summoned or
 -- dismissed); much like when the player target changes we just need to poll
 -- everything.
@@ -670,17 +623,6 @@ function TGUnit.GROUP_ROSTER_UPDATE()
                 unit:Poll(unit.allFlags)
             end
         end
-    end
-end
-
--- Handle UNIT_AURA event.  This fires when a buff or debuff on the unit id
--- changes.
-function TGUnit.UNIT_AURA(unitId)
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("UNIT_AURA unitId "..unitId)
-        unit:NotifyListeners(unit:Poll_BUFFS())
-        unit:NotifyListeners(unit:Poll_DEBUFFS())
     end
 end
 
@@ -720,21 +662,6 @@ end
 function TGUnit.RAID_TARGET_UPDATE()
     for _, unit in pairs(TGUnit.unitList) do
         unit:NotifyListeners(unit:Poll_RAIDICON())
-    end
-end
-
-function TGUnit.PLAYER_FLAGS_CHANGED(unitId)
-    -- This fires when any of the following states change:
-    --      PVP status
-    --      DND
-    --      AFK
-    -- Note: despite the prefix "PLAYER_" this fires for units other than the
-    -- "player" target.
-    local unit = TGUnit.unitList[unitId]
-    if unit ~= nil then
-        TGEvt("PLAYER_FLAGS_CHANGED: "..unitId)
-        unit:NotifyListeners(unit:Poll_PVPSTATUS())
-        unit:NotifyListeners(unit:Poll_AFKSTATUS())
     end
 end
 
@@ -905,6 +832,27 @@ for _, prop in ipairs(TGUNIT_STANDARD_PROPERTIES) do
     local flag, field, getter = unpack(prop)
     TGUnit["Poll_"..flag] = function(self)
         return self:StandardPoll(TGU.FLAGS[flag], field, getter)
+    end
+end
+
+-- The set of standard-poll events.  These simply poll a single property and
+-- then notify the appropriate listeners, so can also be generated
+-- programatically.
+local TGUNIT_STANDARD_EVENTS = {
+    {"UNIT_NAME_UPDATE",        TGUnit.Poll_NAME},
+    {"UNIT_HEALTH_FREQUENT",    TGUnit.Poll_HEALTH},
+    {"UNIT_MAXHEALTH",          TGUnit.Poll_HEALTH},
+    {"UNIT_POWER_FREQUENT",     TGUnit.Poll_POWER},
+    {"UNIT_MAXPOWER",           TGUnit.Poll_POWER},
+    {"UNIT_DISPLAYPOWER",       TGUnit.Poll_POWER},
+    {"UNIT_LEVEL",              TGUnit.Poll_LEVEL},
+    {"PLAYER_FLAGS_CHANGED",    TGUnit.HandlePlayerFlagsChanged},
+    {"UNIT_AURA",               TGUnit.HandleAurasChanged},
+}
+for _, eventInfo in ipairs(TGUNIT_STANDARD_EVENTS) do
+    local event, func = unpack(eventInfo)
+    TGUnit[event] = function(unitId)
+        return TGUnit.StandardEvent(unitId, func)
     end
 end
 
