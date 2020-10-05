@@ -883,7 +883,7 @@ end
 function TGUnit.UNIT_DISPLAYPOWER(unitId)
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        TGEvt("UNIT_DISPLAYPOWER unitId "..unitId.." powerType "..powerType)
+        TGEvt("UNIT_DISPLAYPOWER unitId "..unitId)
         unit:NotifyListeners(unit:Poll_POWER())
     end
 end
