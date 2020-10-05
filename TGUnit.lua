@@ -647,6 +647,17 @@ function TGUnit:Poll_INHEALINGRANGE()
     return 0
 end
 
+-- Update the creature type.
+function TGUnit:Poll_CREATURETYPE()
+    local creatureType = UnitCreatureType(self.id)
+    if creatureType ~= self.creatureType then
+        self.creatureType = creatureType
+        return TGU.FLAGS.CREATURETYPE
+    end
+    
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -724,6 +735,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.INHEALINGRANGE) then
         changedFlags = bit.bor(changedFlags, self:Poll_INHEALINGRANGE())
+    end
+    if btst(flags, TGU.FLAGS.CREATURETYPE) then
+        changedFlags = bit.bor(changedFlags, self:Poll_CREATURETYPE())
     end
 
     -- Notify listeners.
