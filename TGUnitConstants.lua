@@ -8,7 +8,7 @@ TGU.POLL_RATE = 0.1 -- The delay between manual polls
 -- Bitmasks defining various attributes that we can poll.
 TGU.FLAGS = {
     ISPLAYERTARGET = bit.lshift(1,  0), -- The unit is same as "target"
-    COMBOPOINTS    = bit.lshift(1,  1), -- ***The number of combo points
+    --COMBOPOINTS    = bit.lshift(1,  1), -- The number of combo points
     NAME           = bit.lshift(1,  2), -- The unit name
     CLASS          = bit.lshift(1,  3), -- The unit class
     HEALTH         = bit.lshift(1,  4), -- The unit health or max health
@@ -30,7 +30,7 @@ TGU.FLAGS = {
     INHEALINGRANGE = bit.lshift(1, 20), -- True if the unit is in healing range
     CREATURETYPE   = bit.lshift(1, 21), -- Localized creature type or nil
     THREAT         = bit.lshift(1, 22), -- Player threat vs. unit
-    ROLE           = bit.lshift(1, 23), -- ***
+    --ROLE           = bit.lshift(1, 23), -- ***
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
     COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
@@ -52,7 +52,7 @@ TGU.LASTFLAG = bit.lshift(1,TGU.NUMFLAGS)
 -- for the player.
 TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.ISPLAYERTARGET,
-    TGU.FLAGS.COMBOPOINTS,
+    --TGU.FLAGS.COMBOPOINTS,
     TGU.FLAGS.NAME,
     TGU.FLAGS.CLASS,
     TGU.FLAGS.HEALTH,
@@ -76,7 +76,7 @@ TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.ISVISIBLE,
     TGU.FLAGS.INHEALINGRANGE,
     TGU.FLAGS.CREATURETYPE,
-    TGU.FLAGS.ROLE,
+    --TGU.FLAGS.ROLE,
     TGU.FLAGS.EXISTS,
     TGU.FLAGS.GUID)
 TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
@@ -100,7 +100,7 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.AFKSTATUS,
     TGU.FLAGS.COMBAT_SPELL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
-    TGU.FLAGS.COMBOPOINTS,
+    --TGU.FLAGS.COMBOPOINTS,
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.REACTION,
     TGU.FLAGS.NPC,
@@ -111,7 +111,7 @@ TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.INHEALINGRANGE,
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.THREAT,
-    TGU.FLAGS.ROLE,
+    --TGU.FLAGS.ROLE,
     TGU.FLAGS.EXISTS,
     TGU.FLAGS.GUID)
 TGU.ALL_NONPLAYER_FLAGS = bit.bor(TGU.NONPLAYEREVENT_MASK,
