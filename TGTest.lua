@@ -131,6 +131,10 @@ function TGTestObject:UPDATE_PVPSTATUS(unit)
     end
 end
 
+function TGTestObject:UPDATE_AFKSTATUS(unit)
+    TGDbg(unit.id..": afk is "..tostring(unit.afkStatus))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
