@@ -592,6 +592,25 @@ function TGUnit:Poll_LIVING()
     return 0
 end
 
+-- Update the tapped status.
+function TGUnit:GetTappedStatus()
+    if not self.exists then
+        return nil
+    elseif UnitIsTapDenied(self.id) then
+        return true
+    end
+    return false
+end
+function TGUnit:Poll_TAPPED()
+    local tapped = self:GetTappedStatus()
+    if tapped ~= self.tapped then
+        self.tapped = tapped
+        return TGU.FLAGS.TAPPED
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -660,6 +679,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.LIVING) then
         changedFlags = bit.bor(changedFlags, self:Poll_LIVING())
+    end
+    if btst(flags, TGU.FLAGS.TAPPED) then
+        changedFlags = bit.bor(changedFlags, self:Poll_TAPPED())
     end
 
     -- Notify listeners.

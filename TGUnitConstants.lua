@@ -25,7 +25,7 @@ TGU.FLAGS = {
     CLASSIFICATION = bit.lshift(1, 15), -- Rare, elite, worldboss, etc.
     PVPSTATUS      = bit.lshift(1, 16), -- Whether the unit is in PVP or not
     LIVING         = bit.lshift(1, 17), -- Living, dead or ghost.
-    TAPPED         = bit.lshift(1, 18), -- ***
+    TAPPED         = bit.lshift(1, 18), -- True if someone else tapped the unit
     ISVISIBLE      = bit.lshift(1, 19), -- ***
     INHEALINGRANGE = bit.lshift(1, 20), -- ***
     CREATURETYPE   = bit.lshift(1, 21), -- ***
@@ -262,11 +262,6 @@ TGU.PVP_FFA_FLAGGED = 2   -- PVP free-for-all flagged
 TGU.LIVING_ALIVE = 0      -- Unit is alive
 TGU.LIVING_DEAD  = 1      -- Unit is dead
 TGU.LIVING_GHOST = 2      -- Unit is a ghost
-
--- List of tapped types.
-TGU.TAPPED_NONE   = 0     -- Unit is not tapped
-TGU.TAPPED_PLAYER = 1     -- Unit is tapped by the player
-TGU.TAPPED_OTHER  = 2     -- Unit is tapped by someone else
 
 -- List of spell IDs that are channeled.  These are used to generate a list of
 -- channeled spell names used when parsing the combat log.
