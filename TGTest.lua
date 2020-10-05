@@ -157,6 +157,14 @@ function TGTestObject:UPDATE_ISVISIBLE(unit)
     end
 end
 
+function TGTestObject:UPDATE_INHEALINGRANGE(unit)
+    if unit.inHealingRange == true then
+        TGDbg(unit.id..": is in healing range")
+    elseif unit.inHealingRange == false then
+        TGDbg(unit.id..": is not in healing range")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
