@@ -27,7 +27,7 @@ TGU.FLAGS = {
     LIVING         = bit.lshift(1, 17), -- Living, dead or ghost.
     TAPPED         = bit.lshift(1, 18), -- True if someone else tapped the unit
     ISVISIBLE      = bit.lshift(1, 19), -- True if the unit is visible
-    INHEALINGRANGE = bit.lshift(1, 20), -- ***
+    INHEALINGRANGE = bit.lshift(1, 20), -- True if the unit is in healing range
     CREATURETYPE   = bit.lshift(1, 21), -- ***
     THREAT         = bit.lshift(1, 22), -- ***
     ROLE           = bit.lshift(1, 23), -- ***
@@ -274,6 +274,14 @@ TGU.CHANNELED_SPELL_NAME_TO_ID = {}
 for _, id in ipairs(TGU.CHANNELED_SPELL_IDS) do
     TGU.CHANNELED_SPELL_NAME_TO_ID[GetSpellInfo(id)] = id
 end
+
+-- List of spells we use to test if units are in healing range.
+TGU.HEALING_RANGE_TABLE = {
+    ["PRIEST"]  = "Heal",
+    ["DRUID"]   = "Healing Touch",
+    ["PALADIN"] = "Holy Light",
+    ["SHAMAN"]  = "Healing Wave",
+}
 
 -- This is a template unit, used when the template editor is open so that the
 -- user can see various made-up stats.

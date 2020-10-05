@@ -36,6 +36,9 @@ TGUnit.tguFrame = nil
 -- The time at which we entered the world.
 TGUnit.enteredWorldTime = nil
 
+-- The spell we should use to detect if units are in healing range or not.
+TGUnit.healingRangeSpell = nil
+
 -- A mapping of roster (party and raid unit ids) to GUIDs, uniquely identifying
 -- members of the raid and party.
 TGUnit.rosterGUIDs = {}
@@ -628,6 +631,22 @@ function TGUnit:Poll_ISVISIBLE()
     return 0
 end
 
+-- Update the healing range status.
+function TGUnit:Poll_INHEALINGRANGE()
+    -- IsSpellInRange() return nil if the unit doesn't exist or if the spell
+    -- cannot be cast on that unit.
+    if TGUnit.healingRangeSpell then
+        local inHealingRange =
+            (IsSpellInRange(TGUnit.healingRangeSpell, self.id) == 1)
+        if inHealingRange ~= self.inHealingRange then
+            self.inHealingRange = inHealingRange
+            return TGU.FLAGS.INHEALINGRANGE
+        end
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -703,6 +722,9 @@ function TGUnit:Poll(flags)
     if btst(flags, TGU.FLAGS.ISVISIBLE) then
         changedFlags = bit.bor(changedFlags, self:Poll_ISVISIBLE())
     end
+    if btst(flags, TGU.FLAGS.INHEALINGRANGE) then
+        changedFlags = bit.bor(changedFlags, self:Poll_INHEALINGRANGE())
+    end
 
     -- Notify listeners.
     self:NotifyListeners(changedFlags)
@@ -727,6 +749,10 @@ end
 function TGUnit.PLAYER_ENTERING_WORLD()
     -- Record when we entered the world.
     TGUnit.enteredWorldTime = GetTime()
+
+    -- Figure out what spell to use for healing range detection.
+    local _, englishClass    = UnitClass("player")
+    TGUnit.healingRangeSpell = TGU.HEALING_RANGE_TABLE[englishClass]
 
     -- Poll all flags for all units.
     for _, unit in pairs(TGUnit.unitList) do
