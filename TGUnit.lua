@@ -265,12 +265,12 @@ end
 -- Update the existence property and return a flag if it changed.
 function TGUnit:Poll_EXISTS()
     local exists = UnitExists(self.id)
-    if exists == self.exists then
-        return 0
+    if exists ~= self.exists then
+        self.exists = exists
+        return TGU.FLAGS.EXISTS
     end
 
-    self.exists = exists
-    return TGU.FLAGS.EXISTS
+    return 0
 end
 
 -- Update the GUID property and return a flag if it changed.
