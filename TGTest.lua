@@ -121,6 +121,16 @@ function TGTestObject:UPDATE_CLASSIFICATION(unit)
     end
 end
 
+function TGTestObject:UPDATE_PVPSTATUS(unit)
+    if unit.pvpStatus == TGU.PVP_NONE then
+        TGDbg(unit.id..": pvp disabled")
+    elseif unit.pvpStatus == TGU.PVP_FLAGGED then
+        TGDbg(unit.id..": pvp flagged")
+    elseif unit.pvpStatus == TGU.PVP_FFA_FLAGGED then
+        TGDbg(unit.id..": pvp free-for-all")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
