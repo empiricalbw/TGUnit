@@ -135,6 +135,16 @@ function TGTestObject:UPDATE_AFKSTATUS(unit)
     TGDbg(unit.id..": afk is "..tostring(unit.afkStatus))
 end
 
+function TGTestObject:UPDATE_LIVING(unit)
+    if unit.living == TGU.LIVING_ALIVE then
+        TGDbg(unit.id..": is alive")
+    elseif unit.living == TGU.LIVING_DEAD then
+        TGDbg(unit.id..": is dead")
+    elseif unit.living == TGU.LIVING_GHOST then
+        TGDbg(unit.id..": is a ghost")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
