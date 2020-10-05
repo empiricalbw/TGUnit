@@ -34,6 +34,7 @@ TGU.FLAGS = {
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
     COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
+    AFKSTATUS      = bit.lshift(1, 27), -- Whether the unit is AFK or not
 }
 
 -- Map names in the set "UPDATE_FOO" to the bit TGU.FLAGS.FOO.
@@ -64,6 +65,7 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
+    TGU.FLAGS.AFKSTATUS,
     TGU.FLAGS.THREAT)
 TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.REACTION,
@@ -95,6 +97,7 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
+    TGU.FLAGS.AFKSTATUS,
     TGU.FLAGS.COMBAT_SPELL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.COMBOPOINTS,

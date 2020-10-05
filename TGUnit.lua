@@ -554,6 +554,23 @@ function TGUnit:Poll_PVPSTATUS()
     return 0
 end
 
+-- Update the AFK state.
+function TGUnit:GetAFKStatus()
+    if not self.exists then
+        return nil
+    end
+    return UnitIsAFK(self.id)
+end
+function TGUnit:Poll_AFKSTATUS()
+    local afkStatus = self:GetAFKStatus()
+    if afkStatus ~= self.afkStatus then
+        self.afkStatus = afkStatus
+        return TGU.FLAGS.AFKSTATUS
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -616,6 +633,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.PVPSTATUS) then
         changedFlags = bit.bor(changedFlags, self:Poll_PVPSTATUS())
+    end
+    if btst(flags, TGU.FLAGS.AFKSTATUS) then
+        changedFlags = bit.bor(changedFlags, self:Poll_AFKSTATUS())
     end
 
     -- Notify listeners.
@@ -831,6 +851,7 @@ function TGUnit.PLAYER_FLAGS_CHANGED(unitId)
     if unit ~= nil then
         TGEvt("PLAYER_FLAGS_CHANGED: "..unitId)
         unit:NotifyListeners(unit:Poll_PVPSTATUS())
+        unit:NotifyListeners(unit:Poll_AFKSTATUS())
     end
 end
 
