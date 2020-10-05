@@ -658,6 +658,31 @@ function TGUnit:Poll_CREATURETYPE()
     return 0
 end
 
+-- Update threat.
+function TGUnit:Poll_THREAT()
+    local isTanking, status, threatPct, rawThreatPct, threatValue
+    if self.exists then
+        isTanking, status, threatPct, rawThreatPt, threatValue =
+            UnitDetailedThreatSituation("player", self.id)
+    end
+
+    if (isTanking    ~= self.threat.isTanking or
+        status       ~= self.threat.status or
+        threatPct    ~= self.threat.threatPct or
+        rawThreatPct ~= self.threat.rawThreatPct or
+        threatValue  ~= self.threat.threatValue)
+    then
+        self.threat.isTanking    = isTanking
+        self.threat.status       = status
+        self.threat.threatPct    = threatPct
+        self.threat.rawThreatPct = rawThreatPct
+        self.threat.threatValue  = threatValue
+        return TGU.FLAGS.THREAT
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -738,6 +763,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.CREATURETYPE) then
         changedFlags = bit.bor(changedFlags, self:Poll_CREATURETYPE())
+    end
+    if btst(flags, TGU.FLAGS.THREAT) then
+        changedFlags = bit.bor(changedFlags, self:Poll_THREAT())
     end
 
     -- Notify listeners.
