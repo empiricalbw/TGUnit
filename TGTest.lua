@@ -165,6 +165,10 @@ function TGTestObject:UPDATE_INHEALINGRANGE(unit)
     end
 end
 
+function TGTestObject:UPDATE_CREATURETYPE(unit)
+    TGDbg(unit.id..": creature type is "..tostring(unit.creatureType))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
