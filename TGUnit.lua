@@ -611,6 +611,23 @@ function TGUnit:Poll_TAPPED()
     return 0
 end
 
+-- Update the visibility status.
+function TGUnit:GetIsVisible()
+    if not self.exists then
+        return nil
+    end
+    return UnitIsVisible(self.id) == true
+end
+function TGUnit:Poll_ISVISIBLE()
+    local isVisible = self:GetIsVisible()
+    if isVisible ~= self.isVisible then
+        self.isVisible = isVisible
+        return TGU.FLAGS.ISVISIBLE
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -682,6 +699,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.TAPPED) then
         changedFlags = bit.bor(changedFlags, self:Poll_TAPPED())
+    end
+    if btst(flags, TGU.FLAGS.ISVISIBLE) then
+        changedFlags = bit.bor(changedFlags, self:Poll_ISVISIBLE())
     end
 
     -- Notify listeners.
