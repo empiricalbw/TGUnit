@@ -527,9 +527,6 @@ end
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
 function TGUnit:Poll(flags)
-    -- The set of flags to poll - all poll-required flags if nothing specified.
-    flags = flags or self.pollFlags
-
     -- The set of flags that changed and therefore require update calls.  We
     -- initially populate this with the unconditional existence check since
     -- many others rely on it being up to date.
