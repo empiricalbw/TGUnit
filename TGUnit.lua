@@ -248,6 +248,45 @@ function TGUnit:NotifyListeners(changedFlags)
     end
 end
 
+-- Called internally to poll the specified flags.  This is carefully designed
+-- so as to not allocate memory since it will be called very frequently and we
+-- don't want to stress the garbage collector.
+function TGUnit:Poll(flags)
+    -- The set of flags that changed and therefore require update calls.  We
+    -- initially populate this with the unconditional existence check since
+    -- many others rely on it being up to date.
+    local changedFlags = self:Poll_EXISTS()
+
+    -- Update everything.  Note that the string concatenation does not appear
+    -- to allocate memory, probably because the strings already exist.
+    flags = bit.band(flags, bit.bnot(TGU.FLAGS.EXISTS))
+    for flagName, bitmask in pairs(TGU.FLAGS) do
+        if btst(flags, bitmask) then
+            assert(bitmask ~= TGU.FLAGS.EXISTS)
+            changedFlags = bit.bor(changedFlags,
+                                   TGUnit["Poll_"..flagName](self))
+        end
+    end
+
+    -- Notify listeners.
+    self:NotifyListeners(changedFlags)
+end
+
+-- Static method to schedule unit polling.
+function TGUnit.OnUpdate()
+    local currTime = GetTime()
+    if currTime - TGUnit.lastPoll <= TGU.POLL_RATE then
+        return
+    end
+
+    -- Poll only poll-required flags for all units.
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:Poll(unit.pollFlags)
+    end
+
+    TGUnit.lastPoll = currTime
+end
+
 -- Do a standard poll operation.
 function TGUnit:StandardPoll(flag, field, func)
     local val
@@ -521,44 +560,6 @@ function TGUnit:Poll_THREAT()
     end
 
     return 0
-end
-
--- Called internally to poll the specified flags.  This is carefully designed
--- so as to not allocate memory since it will be called very frequently and we
--- don't want to stress the garbage collector.
-function TGUnit:Poll(flags)
-    -- The set of flags that changed and therefore require update calls.  We
-    -- initially populate this with the unconditional existence check since
-    -- many others rely on it being up to date.
-    local changedFlags = self:Poll_EXISTS()
-
-    -- Update everything.
-    flags = bit.band(flags, bit.bnot(TGU.FLAGS.EXISTS))
-    for flagName, bitmask in pairs(TGU.FLAGS) do
-        if btst(flags, bitmask) then
-            assert(bitmask ~= TGU.FLAGS.EXISTS)
-            changedFlags = bit.bor(changedFlags,
-                                   TGUnit["Poll_"..flagName](self))
-        end
-    end
-
-    -- Notify listeners.
-    self:NotifyListeners(changedFlags)
-end
-
--- Static method to schedule unit polling.
-function TGUnit.OnUpdate()
-    local currTime = GetTime()
-    if currTime - TGUnit.lastPoll <= TGU.POLL_RATE then
-        return
-    end
-
-    -- Poll only poll-required flags for all units.
-    for _, unit in pairs(TGUnit.unitList) do
-        unit:Poll(unit.pollFlags)
-    end
-
-    TGUnit.lastPoll = currTime
 end
 
 -- Handle PLAYER_ENTERING_WORLD event.
