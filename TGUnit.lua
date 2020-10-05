@@ -215,7 +215,7 @@ end
 function TGUnit:AddListener(obj)
     for k, v in pairs(self.listeners) do
         if obj[k] then
-            v[obj] = obj
+            v[obj] = obj[k]
             obj[k](obj,self)
         end
     end
@@ -238,8 +238,8 @@ function TGUnit:NotifyListeners(changedFlags)
 
     for handler, mask in pairs(TGU.FLAG_HANDLERS) do
         if btst(changedFlags, mask) then
-            for obj in pairs(self.listeners[handler]) do
-                obj[handler](obj, self)
+            for obj, func in pairs(self.listeners[handler]) do
+                func(obj, self)
             end
         end
     end
