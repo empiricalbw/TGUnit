@@ -149,6 +149,14 @@ function TGTestObject:UPDATE_TAPPED(unit)
     TGDbg(unit.id..": tapped is "..tostring(unit.tapped))
 end
 
+function TGTestObject:UPDATE_ISVISIBLE(unit)
+    if unit.isVisible == true then
+        TGDbg(unit.id..": is visible")
+    elseif unit.isVisible == false then
+        TGDbg(unit.id..": is not visible")
+    end
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
