@@ -145,6 +145,10 @@ function TGTestObject:UPDATE_LIVING(unit)
     end
 end
 
+function TGTestObject:UPDATE_TAPPED(unit)
+    TGDbg(unit.id..": tapped is "..tostring(unit.tapped))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
