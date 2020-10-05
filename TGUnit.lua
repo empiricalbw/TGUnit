@@ -123,8 +123,6 @@ end
 -- Construct a TGUnit.
 function TGUnit:TGUnit(id)
     self.id             = id
-    self.allFlags       = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.pollFlags      = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
@@ -172,7 +170,23 @@ function TGUnit:TGUnit(id)
         self.listeners["UPDATE_"..k] = {}
     end
 
-    self:Poll(self.allFlags)
+    local allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    local pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.allFuncs   = {}
+    self.pollFuncs  = {}
+    for flagName, bitmask in pairs(TGU.FLAGS) do
+        if bitmask ~= TGU.FLAGS.EXISTS then
+            local func = TGUnit["Poll_"..flagName]
+            if bit.band(allFlags, bitmask) ~= 0 then
+                self.allFuncs[#self.allFuncs + 1] = func
+            end
+            if bit.band(pollFlags, bitmask) ~= 0 then
+                self.pollFuncs[#self.pollFuncs + 1] = func
+            end
+        end
+    end
+
+    self:Poll(self.allFuncs)
 end
 
 -- Add a listener that can handle updates when state tracked by a given TGUnit
@@ -219,24 +233,27 @@ function TGUnit:NotifyListeners(changedFlags)
     end
 end
 
--- Called internally to poll the specified flags.  This is carefully designed
+-- Called internally to poll the specified funcs.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
-function TGUnit:Poll(flags)
+function TGUnit:Poll(funcs)
     -- The set of flags that changed and therefore require update calls.  We
     -- initially populate this with the unconditional existence check since
     -- many others rely on it being up to date.
     local changedFlags = self:Poll_EXISTS()
 
-    -- Update everything.  Note that the string concatenation does not appear
-    -- to allocate memory, probably because the strings already exist.
-    flags = bit.band(flags, bit.bnot(TGU.FLAGS.EXISTS))
-    for flagName, bitmask in pairs(TGU.FLAGS) do
-        if btst(flags, bitmask) then
-            assert(bitmask ~= TGU.FLAGS.EXISTS)
-            changedFlags = bit.bor(changedFlags,
-                                   TGUnit["Poll_"..flagName](self))
-        end
+    -- If the unit doesn't exist and the existence hasn't changed, bail out
+    -- since nothing can be new.  For instance this pares off the 40 raid
+    -- frames that are normally unpopulated.
+    if changedFlags == 0 and not self.exists then
+        return
+    end
+
+    -- Update everything by running straight through the list of update
+    -- functions.  We use addition for the logical OR operation since it is far
+    -- more efficient that bit.bor().
+    for _, func in ipairs(funcs) do
+        changedFlags = changedFlags + func(self)
     end
 
     -- Notify listeners.
@@ -252,7 +269,7 @@ function TGUnit.OnUpdate()
 
     -- Poll only poll-required flags for all units.
     for _, unit in pairs(TGUnit.unitList) do
-        unit:Poll(unit.pollFlags)
+        unit:Poll(unit.pollFuncs)
     end
 
     TGUnit.lastPoll = currTime
@@ -565,7 +582,7 @@ function TGUnit.PLAYER_ENTERING_WORLD()
 
     -- Poll all flags for all units.
     for _, unit in pairs(TGUnit.unitList) do
-        unit:Poll(unit.allFlags)
+        unit:Poll(unit.allFuncs)
     end
 end
 
@@ -579,7 +596,7 @@ end
 -- units already, but it's not a big deal.
 function TGUnit.PLAYER_TARGET_CHANGED()
     for _, unit in pairs(TGUnit.unitList) do
-        unit:Poll(TGU.FLAGS.ISPLAYERTARGET)
+        unit:NotifyListeners(unit:Poll_ISPLAYERTARGET())
     end
 
     -- The "target" unit object will exist if anyone is watching "target" or
@@ -590,9 +607,9 @@ function TGUnit.PLAYER_TARGET_CHANGED()
         return
     end
 
-    target:Poll(target.allFlags)
+    target:Poll(target.allFuncs)
     for u in pairs(target.indirectUnits) do
-        u:Poll(u.allFlags)
+        u:Poll(u.allFuncs)
     end
 end
 
@@ -603,7 +620,7 @@ function TGUnit.UNIT_PET(unitId)
     local petUnit = TGUnit.unitList[TGU.PETMAP[unitId]]
     if petUnit ~= nil then
         TGEvt("UNIT_PET unitId "..unitId)
-        petUnit:Poll(petUnit.allFlags)
+        petUnit:Poll(petUnit.allFuncs)
     end
 end
 
@@ -620,7 +637,7 @@ function TGUnit.GROUP_ROSTER_UPDATE()
             TGUnit.rosterGUIDs[unitId] = guid
             local unit = TGUnit.unitList[unitId]
             if unit ~= nil then
-                unit:Poll(unit.allFlags)
+                unit:Poll(unit.allFuncs)
             end
         end
     end
