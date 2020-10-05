@@ -23,7 +23,7 @@ TGU.FLAGS = {
     RAIDICON       = bit.lshift(1, 13), -- Unit's raid icon num or nil if none
     NPC            = bit.lshift(1, 14), -- Unit is an NPC.
     CLASSIFICATION = bit.lshift(1, 15), -- Rare, elite, worldboss, etc.
-    PVPSTATUS      = bit.lshift(1, 16), -- ***
+    PVPSTATUS      = bit.lshift(1, 16), -- Whether the unit is in PVP or not
     LIVING         = bit.lshift(1, 17), -- ***
     TAPPED         = bit.lshift(1, 18), -- ***
     ISVISIBLE      = bit.lshift(1, 19), -- ***
@@ -63,12 +63,12 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
+    TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.THREAT)
 TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.REACTION,
     TGU.FLAGS.NPC,
     TGU.FLAGS.CLASSIFICATION,
-    TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.LIVING,
     TGU.FLAGS.TAPPED,
     TGU.FLAGS.ISVISIBLE,
@@ -94,6 +94,7 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.DEBUFFS,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
+    TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.COMBAT_SPELL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.COMBOPOINTS,
@@ -101,7 +102,6 @@ TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.REACTION,
     TGU.FLAGS.NPC,
     TGU.FLAGS.CLASSIFICATION,
-    TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.LIVING,
     TGU.FLAGS.TAPPED,
     TGU.FLAGS.ISVISIBLE,

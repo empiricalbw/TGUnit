@@ -531,6 +531,29 @@ function TGUnit:Poll_CLASSIFICATION()
     end
 end
 
+-- Update the PVP state.
+function TGUnit:GetPVPStatus()
+    -- These return false if the unit doesn't exist, so we do an existence
+    -- check first.
+    if not self.exists then
+        return nil
+    elseif UnitIsPVPFreeForAll(self.id) then
+        return TGU.PVP_FFA_FLAGGED
+    elseif UnitIsPVP(self.id) then
+        return TGU.PVP_FLAGGED
+    end
+    return TGU.PVP_NONE
+end
+function TGUnit:Poll_PVPSTATUS()
+    local pvpStatus = self:GetPVPStatus()
+    if pvpStatus ~= self.pvpStatus then
+        self.pvpStatus = pvpStatus
+        return TGU.FLAGS.PVPSTATUS
+    end
+
+    return 0
+end
+
 -- Called internally to poll the specified flags.  This is carefully designed
 -- so as to not allocate memory since it will be called very frequently and we
 -- don't want to stress the garbage collector.
@@ -590,6 +613,9 @@ function TGUnit:Poll(flags)
     end
     if btst(flags, TGU.FLAGS.CLASSIFICATION) then
         changedFlags = bit.bor(changedFlags, self:Poll_CLASSIFICATION())
+    end
+    if btst(flags, TGU.FLAGS.PVPSTATUS) then
+        changedFlags = bit.bor(changedFlags, self:Poll_PVPSTATUS())
     end
 
     -- Notify listeners.
@@ -791,6 +817,20 @@ end
 function TGUnit.RAID_TARGET_UPDATE()
     for _, unit in pairs(TGUnit.unitList) do
         unit:NotifyListeners(unit:Poll_RAIDICON())
+    end
+end
+
+function TGUnit.PLAYER_FLAGS_CHANGED(unitId)
+    -- This fires when any of the following states change:
+    --      PVP status
+    --      DND
+    --      AFK
+    -- Note: despite the prefix "PLAYER_" this fires for units other than the
+    -- "player" target.
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        TGEvt("PLAYER_FLAGS_CHANGED: "..unitId)
+        unit:NotifyListeners(unit:Poll_PVPSTATUS())
     end
 end
 
