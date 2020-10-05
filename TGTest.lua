@@ -169,6 +169,19 @@ function TGTestObject:UPDATE_CREATURETYPE(unit)
     TGDbg(unit.id..": creature type is "..tostring(unit.creatureType))
 end
 
+function TGTestObject:UPDATE_THREAT(unit)
+    local str
+    if unit.threat.threatValue and unit.threat.threatValue < 0 then
+        str = "Fade";
+    elseif (unit.threat.threatPct and
+            unit.threat.threatPct ~= 0 and
+            unit.threat.threatValue)
+    then
+        str = math.floor((unit.threat.threatValue/unit.threat.threatPct) + 0.5)
+    end
+    TGDbg(unit.id..": threat is "..tostring(str))
+end
+
 TGTest = {}
 
 function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
