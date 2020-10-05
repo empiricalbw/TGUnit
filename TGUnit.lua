@@ -210,16 +210,23 @@ function TGUnit:Poll_GUID()
     return TGU.FLAGS.GUID
 end
 
--- Update the name property and return a flag if it changed.
-function TGUnit:Poll_NAME()
-    -- UnitName returns nil if the unit doesn't exist.
-    local name = UnitName(self.id)
-    if name ~= self.name then
-        self.name = name
-        return TGU.FLAGS.NAME
+-- Do a standard poll operation.
+function TGUnit:StandardPoll(flag, field, func)
+    local val
+    if self.exists then
+        val = func(self.id)
+    end
+    if val ~= self[field] then
+        self[field] = val
+        return flag
     end
 
     return 0
+end
+
+-- Update the name property and return a flag if it changed.
+function TGUnit:Poll_NAME()
+    return self:StandardPoll(TGU.FLAGS.NAME, "name", UnitName)
 end
 
 -- Update the health property and return a flag if it changed.  We update both
@@ -270,32 +277,16 @@ end
 
 -- Update the level property and return a flag if it changed.
 function TGUnit:Poll_LEVEL()
-    -- UnitLevel returns 0 if the target is not set.
-    local level
-
-    if self.exists then
-        level = UnitLevel(self.id)
-    end
-
-    if self.level == level then
-        return 0
-    end
-
-    self.level = level
-    return TGU.FLAGS.LEVEL
+    return self:StandardPoll(TGU.FLAGS.LEVEL, "level", UnitLevel)
 end
 
 -- Update the "is player target" property and return a flag if it changed.
+local function UnitIsPlayerTarget(unitId)
+    return UnitIsUnit(unitId, "target")
+end
 function TGUnit:Poll_ISPLAYERTARGET()
-    -- UnitIsUnit returns false if one of the units doesn't exist.
-    local isPlayerTarget = (UnitExists("target") and
-                            UnitIsUnit(self.id, "target"))
-    if self.isPlayerTarget == isPlayerTarget then
-        return 0
-    end
-
-    self.isPlayerTarget = isPlayerTarget
-    return TGU.FLAGS.ISPLAYERTARGET
+    return self:StandardPoll(TGU.FLAGS.ISPLAYERTARGET, "isPlayerTarget",
+                             UnitIsPlayerTarget)
 end
 
 -- Poll the set of auras using the specified filter and return a bitmask of any
@@ -379,13 +370,7 @@ end
 
 -- Update the in-combat property and return a flag if it changed.
 function TGUnit:Poll_COMBAT()
-    local combat = UnitAffectingCombat(self.id)
-    if combat ~= self.combat then
-        self.combat = combat
-        return TGU.FLAGS.COMBAT
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.COMBAT, "combat", UnitAffectingCombat)
 end
 
 -- Update the player's spellcast.  In Classic, only the player's spellcast can
@@ -457,205 +442,107 @@ end
 
 -- Update the unit's reaction (friendly, neutral, hostile) and return a flag if
 -- it changed.
-function TGUnit:GetReaction()
-    if not self.exists then
-        return nil
-    elseif UnitIsFriend(self.id, "player") then
+local function UnitGetReaction(unitId)
+    if UnitIsFriend(unitId, "player") then
         return TGU.REACTION_FRIENDLY
-    elseif UnitIsEnemy(self.id, "player") then
+    elseif UnitIsEnemy(unitId, "player") then
         return TGU.REACTION_HOSTILE
     end
     return TGU.REACTION_NEUTRAL
 end
 function TGUnit:Poll_REACTION()
-    local reaction = self:GetReaction()
-    if reaction ~= self.reaction then
-        self.reaction = reaction
-        return TGU.FLAGS.REACTION
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.REACTION, "reaction", UnitGetReaction)
 end
 
 -- Update hte unit's leader status and return a flag if it changed.
 function TGUnit:Poll_LEADER()
-    local leader = UnitIsGroupLeader(self.id)
-    if leader ~= self.leader then
-        self.leader = leader
-        return TGU.FLAGS.LEADER
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.LEADER, "leader", UnitIsGroupLeader)
 end
 
 -- Update the unit's raid icon and return a flag if it changed.  According to
 -- wow.gamepedia, this can return random results for non-existent units, so we
 -- do an existence check first.
 function TGUnit:Poll_RAIDICON()
-    local raidIcon
-    if self.exists then
-        raidIcon = GetRaidTargetIndex(self.id)
-    end
-    if raidIcon ~= self.raidIcon then
-        self.raidIcon = raidIcon
-        return TGU.FLAGS.RAIDICON
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.RAIDICON, "raidIcon", GetRaidTargetIndex)
 end
 
 -- Update whether or not the unit is an npc.
+local function UnitIsNPC(unitId)
+    return not UnitIsPlayer(unitId)
+end
 function TGUnit:Poll_NPC()
-    -- UnitIsPlayer returns false if the unit doesn't exist, so we do an
-    -- existence check first.
-    local npc
-    if self.exists then
-        npc = not UnitIsPlayer(self.id)
-    end
-    if npc ~= self.npc then
-        self.npc = npc
-        return TGU.FLAGS.NPC
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.NPC, "npc", UnitIsNPC)
 end
 
 -- Update the unit classification (normal, rare, elite, worldboss, etc).
 function TGUnit:Poll_CLASSIFICATION()
-    -- UnitClassification returns "normal" if the unit doesn't exist, so we do
-    -- an existence check first.
-    local classification
-    if self.exists then
-        classification = UnitClassification(self.id)
-    end
-    if classification ~= self.classification then
-        self.classification = classification
-        return TGU.FLAGS.CLASSIFICATION
-    end
+    return self:StandardPoll(TGU.FLAGS.CLASSIFICATION, "classification",
+                             UnitClassification)
 end
 
 -- Update the PVP state.
-function TGUnit:GetPVPStatus()
+local function UnitGetPVPStatus(unitId)
     -- These return false if the unit doesn't exist, so we do an existence
     -- check first.
-    if not self.exists then
-        return nil
-    elseif UnitIsPVPFreeForAll(self.id) then
+    if UnitIsPVPFreeForAll(unitId) then
         return TGU.PVP_FFA_FLAGGED
-    elseif UnitIsPVP(self.id) then
+    elseif UnitIsPVP(unitId) then
         return TGU.PVP_FLAGGED
     end
     return TGU.PVP_NONE
 end
 function TGUnit:Poll_PVPSTATUS()
-    local pvpStatus = self:GetPVPStatus()
-    if pvpStatus ~= self.pvpStatus then
-        self.pvpStatus = pvpStatus
-        return TGU.FLAGS.PVPSTATUS
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.PVPSTATUS, "pvpStatus", UnitGetPVPStatus)
 end
 
 -- Update the AFK state.
-function TGUnit:GetAFKStatus()
-    if not self.exists then
-        return nil
-    end
-    return UnitIsAFK(self.id)
-end
 function TGUnit:Poll_AFKSTATUS()
-    local afkStatus = self:GetAFKStatus()
-    if afkStatus ~= self.afkStatus then
-        self.afkStatus = afkStatus
-        return TGU.FLAGS.AFKSTATUS
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.AFKSTATUS, "afkStatus", UnitIsAFK)
 end
 
 -- Update the living status.
-function TGUnit:GetLivingStatus()
-    if not self.exists then
-        return nil
-    elseif UnitIsGhost(self.id) then
+local function UnitGetLivingStatus(unitId)
+    if UnitIsGhost(unitId) then
         return TGU.LIVING_GHOST
-    elseif UnitIsDead(self.id) then
+    elseif UnitIsDead(unitId) then
         return TGU.LIVING_DEAD
     end
     return TGU.LIVING_ALIVE
 end
 function TGUnit:Poll_LIVING()
-    local living = self:GetLivingStatus()
-    if living ~= self.living then
-        self.living = living
-        return TGU.FLAGS.LIVING
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.LIVING, "living", UnitGetLivingStatus)
 end
 
 -- Update the tapped status.
-function TGUnit:GetTappedStatus()
-    if not self.exists then
-        return nil
-    elseif UnitIsTapDenied(self.id) then
-        return true
-    end
-    return false
-end
 function TGUnit:Poll_TAPPED()
-    local tapped = self:GetTappedStatus()
-    if tapped ~= self.tapped then
-        self.tapped = tapped
-        return TGU.FLAGS.TAPPED
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.TAPPED, "tapped", UnitIsTapDenied)
 end
 
 -- Update the visibility status.
-function TGUnit:GetIsVisible()
-    if not self.exists then
-        return nil
-    end
-    return UnitIsVisible(self.id) == true
+local function UnitGetIsVisible(unitId)
+    return UnitIsVisible(unitId) == true
 end
 function TGUnit:Poll_ISVISIBLE()
-    local isVisible = self:GetIsVisible()
-    if isVisible ~= self.isVisible then
-        self.isVisible = isVisible
-        return TGU.FLAGS.ISVISIBLE
-    end
-
-    return 0
+    return self:StandardPoll(TGU.FLAGS.ISVISIBLE, "isVisible", UnitGetIsVisible)
 end
 
 -- Update the healing range status.
-function TGUnit:Poll_INHEALINGRANGE()
-    -- IsSpellInRange() return nil if the unit doesn't exist or if the spell
-    -- cannot be cast on that unit.
-    if TGUnit.healingRangeSpell then
-        local inHealingRange =
-            (IsSpellInRange(TGUnit.healingRangeSpell, self.id) == 1)
-        if inHealingRange ~= self.inHealingRange then
-            self.inHealingRange = inHealingRange
-            return TGU.FLAGS.INHEALINGRANGE
-        end
+local function UnitGetInHealingRange(unitId)
+    if not TGUnit.healingRangeSpell then
+        return nil
     end
 
-    return 0
+    return IsSpellInRange(TGUnit.healingRangeSpell, unitId) == 1
+end
+function TGUnit:Poll_INHEALINGRANGE()
+    return self:StandardPoll(TGU.FLAGS.INHEALINGRANGE, "inHealingRange",
+                             UnitGetInHealingRange)
 end
 
 -- Update the creature type.
 function TGUnit:Poll_CREATURETYPE()
-    local creatureType = UnitCreatureType(self.id)
-    if creatureType ~= self.creatureType then
-        self.creatureType = creatureType
-        return TGU.FLAGS.CREATURETYPE
-    end
-    
-    return 0
+    return self:StandardPoll(TGU.FLAGS.CREATURETYPE, "creatureType",
+                             UnitCreatureType)
 end
 
 -- Update threat.
