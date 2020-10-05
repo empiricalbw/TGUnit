@@ -43,6 +43,9 @@ TGUnit.healingRangeSpell = nil
 -- members of the raid and party.
 TGUnit.rosterGUIDs = {}
 
+-- A cache of flags-to-funcs.
+TGUnit.flagsToFuncs = {}
+
 -- Utility function for bitmasks.
 local function btst(mask1,mask2)
     return bit.band(mask1,mask2) ~= 0
@@ -172,21 +175,30 @@ function TGUnit:TGUnit(id)
 
     local allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
     local pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.allFuncs   = {}
-    self.pollFuncs  = {}
+    self.allFuncs   = TGUnit.GenFuncs(allFlags)
+    self.pollFuncs  = TGUnit.GenFuncs(pollFlags)
+
+    self:Poll(self.allFuncs)
+end
+
+function TGUnit.GenFuncs(flags)
+    local funcs = TGUnit.flagsToFuncs[flags]
+    if funcs ~= nil then
+        return funcs
+    end
+
+    funcs = {}
     for flagName, bitmask in pairs(TGU.FLAGS) do
         if bitmask ~= TGU.FLAGS.EXISTS then
             local func = TGUnit["Poll_"..flagName]
-            if bit.band(allFlags, bitmask) ~= 0 then
-                self.allFuncs[#self.allFuncs + 1] = func
-            end
-            if bit.band(pollFlags, bitmask) ~= 0 then
-                self.pollFuncs[#self.pollFuncs + 1] = func
+            if bit.band(flags, bitmask) ~= 0 then
+                funcs[#funcs + 1] = func
             end
         end
     end
 
-    self:Poll(self.allFuncs)
+    TGUnit.flagsToFuncs[flags] = funcs
+    return funcs
 end
 
 -- Add a listener that can handle updates when state tracked by a given TGUnit
