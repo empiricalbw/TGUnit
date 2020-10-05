@@ -725,6 +725,9 @@ end
 
 -- Handle PLAYER_ENTERING_WORLD event.
 function TGUnit.PLAYER_ENTERING_WORLD()
+    -- Record when we entered the world.
+    TGUnit.enteredWorldTime = GetTime()
+
     -- Poll all flags for all units.
     for _, unit in pairs(TGUnit.unitList) do
         unit:Poll(unit.allFlags)
