@@ -103,35 +103,6 @@ local function UnitGetInHealingRange(unitId)
     return IsSpellInRange(TGUnit.healingRangeSpell, unitId) == 1
 end
 
--- The set of standard-poll properties.  These don't require any special per-
--- property logic and therefore can all be generated programatically.  Other
--- properties that require more logic are special-cased later.
-local TGUNIT_STANDARD_PROPERTIES = {
-    {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
-    {"NAME",            "name",             UnitName},
-    {"CLASS",           "class",            UnitClass},
-    {"LEVEL",           "level",            UnitLevel},
-    {"COMBAT",          "combat",           UnitAffectingCombat},
-    {"REACTION",        "reaction",         UnitGetReaction},
-    {"LEADER",          "leader",           UnitIsGroupLeader},
-    {"RAIDICON",        "raidIcon",         GetRaidTargetIndex},
-    {"NPC",             "npc",              UnitIsNPC},
-    {"CLASSIFICATION",  "classification",   UnitClassification},
-    {"PVPSTATUS",       "pvpStatus",        UnitGetPVPStatus},
-    {"AFKSTATUS",       "afkStatus",        UnitIsAFK},
-    {"LIVING",          "living",           UnitGetLivingStatus},
-    {"TAPPED",          "tapped",           UnitIsTapDenied},
-    {"ISVISIBLE",       "isVisible",        UnitGetIsVisible},
-    {"INHEALINGRANGE",  "inHealingRange",   UnitGetInHealingRange},
-    {"CREATURETYPE",    "creatureType",     UnitCreatureType},
-}
-for _, prop in ipairs(TGUNIT_STANDARD_PROPERTIES) do
-    local flag, field, getter = unpack(prop)
-    TGUnit["Poll_"..flag] = function(self)
-        return self:StandardPoll(TGU.FLAGS[flag], field, getter)
-    end
-end
-
 -- Instantiate a new TGUnit.  If the unit already exists, return it instead.
 function TGUnit:new(id)
     assert(id)
@@ -905,6 +876,35 @@ function TGUnit.PrintGuidList()
             str = str.." "..unit.id
         end
         TGDbg(str)
+    end
+end
+
+-- The set of standard-poll properties.  These don't require any special per-
+-- property logic and therefore can all be generated programatically.  Other
+-- properties that require more logic are special-cased later.
+local TGUNIT_STANDARD_PROPERTIES = {
+    {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
+    {"NAME",            "name",             UnitName},
+    {"CLASS",           "class",            UnitClass},
+    {"LEVEL",           "level",            UnitLevel},
+    {"COMBAT",          "combat",           UnitAffectingCombat},
+    {"REACTION",        "reaction",         UnitGetReaction},
+    {"LEADER",          "leader",           UnitIsGroupLeader},
+    {"RAIDICON",        "raidIcon",         GetRaidTargetIndex},
+    {"NPC",             "npc",              UnitIsNPC},
+    {"CLASSIFICATION",  "classification",   UnitClassification},
+    {"PVPSTATUS",       "pvpStatus",        UnitGetPVPStatus},
+    {"AFKSTATUS",       "afkStatus",        UnitIsAFK},
+    {"LIVING",          "living",           UnitGetLivingStatus},
+    {"TAPPED",          "tapped",           UnitIsTapDenied},
+    {"ISVISIBLE",       "isVisible",        UnitGetIsVisible},
+    {"INHEALINGRANGE",  "inHealingRange",   UnitGetInHealingRange},
+    {"CREATURETYPE",    "creatureType",     UnitCreatureType},
+}
+for _, prop in ipairs(TGUNIT_STANDARD_PROPERTIES) do
+    local flag, field, getter = unpack(prop)
+    TGUnit["Poll_"..flag] = function(self)
+        return self:StandardPoll(TGU.FLAGS[flag], field, getter)
     end
 end
 
