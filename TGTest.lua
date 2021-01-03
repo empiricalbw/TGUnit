@@ -206,4 +206,4 @@ function TGTest.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
     end
 end
 
-TGEventHandler.Register(TGTest)
+--TGEventManager.Register(TGTest)

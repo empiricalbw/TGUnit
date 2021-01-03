@@ -886,5 +886,5 @@ for _, eventInfo in ipairs(TGUNIT_STANDARD_EVENTS) do
 end
 
 if TGU_LIB_ENABLED then
-    TGEventHandler.Register(TGUnit)
+    TGEventManager.Register(TGUnit)
 end
