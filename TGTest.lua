@@ -1,5 +1,6 @@
 TGTEST_UNIT_LIST = {"target", "targettarget", "targettargettarget",
                     "player", "pet", "pettarget",
+                    "focus",
                     "party1", "partypet1",
                     "party2", "partypet2",
                     "party3", "partypet3",
