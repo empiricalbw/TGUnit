@@ -403,12 +403,8 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     auraCountsCache.Disease = 0
     auraCountsCache.Poison  = 0
     for i, aura in ipairs(auras) do
-        name,
-        texture,
-        applications,
-        auraType,
-        duration,
-        expirationTime = UnitAura(self.id, i, filter)
+        local name, texture, applications, auraType, duration, expirationTime =
+            UnitAura(self.id, i, filter)
 
         if (aura.name           ~= name or
             aura.texture        ~= texture or
@@ -486,6 +482,7 @@ function TGUnit:Poll_PLAYER_SPELL()
 
     local spell, _, texture, startTime, endTime, _, castGUID = CastingInfo()
 
+    local spellType
     if spell ~= nil then
         spellType = "Casting"
     else
@@ -550,7 +547,7 @@ end
 function TGUnit:Poll_THREAT()
     local isTanking, status, threatPct, rawThreatPct, threatValue
     if self.exists then
-        isTanking, status, threatPct, rawThreatPt, threatValue =
+        isTanking, status, threatPct, rawThreatPct, threatValue =
             UnitDetailedThreatSituation("player", self.id)
     end
 
