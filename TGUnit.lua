@@ -168,6 +168,9 @@ function TGUnit:TGUnit(id)
     if id ~= "target" and string.find(id,"^target") then
         TGUnit:new("target").indirectUnits[self] = self
     end
+    if id ~= "focus" and string.find(id,"^focus") then
+        TGUnit:new("focus").indirectUnits[self] = self
+    end
 
     for k in pairs(TGU.FLAGS) do
         self.listeners["UPDATE_"..k] = {}
@@ -621,6 +624,24 @@ function TGUnit.PLAYER_TARGET_CHANGED()
 
     target:Poll(target.allFuncs)
     for u in pairs(target.indirectUnits) do
+        u:Poll(u.allFuncs)
+    end
+end
+
+-- Handler PLAYER_FOCUS_CHANGED event.  This works nearly identically to
+-- handling PLAYER_TARGET_CHANGED except that we don't do the ISPLAYERTARGET
+-- udpate.
+function TGUnit.PLAYER_FOCUS_CHANGED()
+    -- The "focus" unit object will exist if anyone is watching "focus" or
+    -- anything derived from it (even if no one is explicitly watching
+    -- "focus").
+    local focus = TGUnit.unitList["focus"]
+    if focus == nil then
+        return
+    end
+
+    focus:Poll(focus.allFuncs)
+    for u in pairs(focus.indirectUnits) do
         u:Poll(u.allFuncs)
     end
 end

@@ -84,7 +84,7 @@ TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
 -- This bitmask describes the set of attributes for which the game engine
 -- generates events notifying us of a change for all of the non-player unit
 -- IDs which the game generates events for:
---     target, pet, mouseover, partyX, raidX
+--     target, pet, focus, mouseover, partyX, raidX
 TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.ISPLAYERTARGET,
     TGU.FLAGS.NAME,
@@ -130,6 +130,7 @@ TGU.POLLFLAGS = {
     ["player"]    = TGU.PLAYERPOLL_MASK,
     ["target"]    = TGU.NONPLAYERPOLL_MASK,
     ["pet"]       = TGU.NONPLAYERPOLL_MASK,
+    ["focus"]     = TGU.NONPLAYERPOLL_MASK,
     ["mouseover"] = TGU.NONPLAYERPOLL_MASK,
     ["party1"]    = TGU.NONPLAYERPOLL_MASK,
     ["party2"]    = TGU.NONPLAYERPOLL_MASK,
