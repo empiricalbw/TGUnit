@@ -177,10 +177,10 @@ function TGUnit:TGUnit(id)
         self.listeners["UPDATE_"..k] = {}
     end
 
-    local allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    local pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.allFuncs   = TGUnit.GenFuncs(allFlags)
-    self.pollFuncs  = TGUnit.GenFuncs(pollFlags)
+    self.allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.allFuncs  = TGUnit.GenFuncs(self.allFlags)
+    self.pollFuncs = TGUnit.GenFuncs(self.pollFlags)
 
     self:Poll(self.allFuncs)
 end
@@ -224,8 +224,10 @@ function TGUnit:AddListener(obj)
         end
     end
 
-    if obj["UPDATE_BITMASK"] then
-        self.maskListeners[obj] = obj["UPDATE_BITMASK"]
+    local f = obj.UPDATE_BITMASK
+    if f then
+        self.maskListeners[obj] = f
+        f(obj,self,self.allFlags)
     end
 end
 
@@ -253,7 +255,7 @@ function TGUnit:NotifyListeners(changedFlags)
     end
 
     for obj, func in pairs(self.maskListeners) do
-        if btst(changedFlags, listener.tguMask) then
+        if btst(changedFlags, obj.tguMask) then
             func(obj, self, changedFlags)
         end
     end
@@ -742,6 +744,17 @@ end
 function TGUnit.RAID_TARGET_UPDATE()
     for _, unit in pairs(TGUnit.unitList) do
         unit:NotifyListeners(unit:Poll_RAIDICON())
+    end
+end
+
+-- Handle UNIT_MODEL_CHANGED.  This fires when a unit's model changes.  The
+-- following units are notified of these changes:
+--
+--  player
+function TGUnit.UNIT_MODEL_CHANGED(id)
+    local unit = TGUnit.unitList[id]
+    if unit then
+        unit:NotifyListeners(TGU.FLAGS.MODEL)
     end
 end
 
