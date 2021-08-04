@@ -129,7 +129,7 @@ function TGUnit:TGUnit(id)
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
-    self.class          = {localizedClass=nil,englishClass=nil}
+    self.class          = {localized=nil,name=nil,id=nil}
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
     self.power          = {type=nil,current=nil,max=nil}
@@ -159,6 +159,7 @@ function TGUnit:TGUnit(id)
     self.debuffCounts   = {Magic=0,Curse=0,Disease=0,Poison=0}
     self.indirectUnits  = {}
     self.listeners      = {}
+    self.maskListeners  = {}
 
     for i=1,32 do
         self.buffs[i]   = {}
@@ -222,14 +223,18 @@ function TGUnit:AddListener(obj)
             obj[k](obj,self)
         end
     end
+
+    if obj["UPDATE_BITMASK"] then
+        self.maskListeners[obj] = obj["UPDATE_BITMASK"]
+    end
 end
 
 -- Remove a listener from the unit.
 function TGUnit:RemoveListener(obj)
+    self.maskListeners[obj] = nil
+
     for k, v in pairs(self.listeners) do
-        if v[obj] then
-            v[obj] = nil
-        end
+        v[obj] = nil
     end
 end
 
@@ -244,6 +249,12 @@ function TGUnit:NotifyListeners(changedFlags)
             for obj, func in pairs(self.listeners[handler]) do
                 func(obj, self)
             end
+        end
+    end
+
+    for obj, func in pairs(self.maskListeners) do
+        if btst(changedFlags, listener.tguMask) then
+            func(obj, self, changedFlags)
         end
     end
 end
@@ -345,10 +356,32 @@ function TGUnit:Poll_GUID()
     return TGU.FLAGS.GUID
 end
 
+-- Update the class property and return a flag if it changed.
+function TGUnit:Poll_CLASS()
+    -- TODO: Check what UnitClass() returns if the unit doesn't exist.
+    local localized, name, id
+
+    if self.exists then
+        localized, name, id = UnitClass(self.id)
+    end
+
+    if (self.class.localized == localized and
+        self.class.name == name and
+        self.class.id == id)
+    then
+        return 0
+    end
+
+    self.class.localized = localized
+    self.class.name      = name
+    self.class.id        = id
+    return TGU.FLAGS.CLASS
+end
+
 -- Update the health property and return a flag if it changed.  We update both
 -- current and max health here.
 function TGUnit:Poll_HEALTH()
-    -- UnitHealth and UnitHealthMax both return 0 if the target is not set.
+    -- UnitHealth and UnitHealthMax both return 0 if the unit doesn't exist.
     local current, max
 
     if self.exists then
@@ -368,8 +401,8 @@ end
 -- Update the power property and return a flag if it changed.  We update all
 -- parts of the power (current, max, type) here.
 function TGUnit:Poll_POWER()
-    -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the target is
-    -- not set.
+    -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the unit
+    -- doesn't exist.
     local current, max, typ
 
     if self.exists then
@@ -859,7 +892,7 @@ end
 local TGUNIT_STANDARD_PROPERTIES = {
     {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
     {"NAME",            "name",             UnitName},
-    {"CLASS",           "class",            UnitClass},
+    --{"CLASS",           "class",            UnitClass},
     {"LEVEL",           "level",            UnitLevel},
     {"COMBAT",          "combat",           UnitAffectingCombat},
     {"REACTION",        "reaction",         UnitGetReaction},
