@@ -138,7 +138,7 @@ function TGUnit:TGUnit(id)
     self.level          = nil
     self.combat         = nil
     self.leader         = nil
-    self.lootMaster     = (TGU_MASTER_LOOTER_UNIT == unit)
+    self.lootMaster     = nil
     self.raidIcon       = nil
     self.role           = nil
     self.model          = nil
@@ -279,7 +279,7 @@ function TGUnit:Poll(funcs)
 
     -- Update everything by running straight through the list of update
     -- functions.  We use addition for the logical OR operation since it is far
-    -- more efficient that bit.bor().
+    -- more efficient than bit.bor().
     for _, func in ipairs(funcs) do
         changedFlags = changedFlags + func(self)
     end
@@ -378,6 +378,20 @@ function TGUnit:Poll_CLASS()
     self.class.name      = name
     self.class.id        = id
     return TGU.FLAGS.CLASS
+end
+
+-- Update the loot master property and return a flag if it changed.
+function TGUnit:Poll_LOOT_MASTER()
+    local lootmethod, masterlooterPartyId, masterlooterRaidID = GetLootMethod()
+    local masterlooterId = masterlooterPartyId or masterlooterRaidID
+    local lootMaster = masterlooterId and UnitIsUnit(self.id, masterlooterId)
+
+    if self.lootMaster == lootMaster then
+        return 0
+    end
+
+    self.lootMaster = lootMaster
+    return TGU.FLAGS.LOOT_MASTER
 end
 
 -- Update the health property and return a flag if it changed.  We update both
@@ -734,6 +748,15 @@ end
 function TGUnit.PARTY_LEADER_CHANGED()
     for _, unit in pairs(TGUnit.unitList) do
         unit:NotifyListeners(unit:Poll_LEADER())
+    end
+end
+
+-- Handle PARTY_LOOT_METHOD_CHANGED.  This fires when the loot method changes
+-- but it doesn't tell us anything about who the loot master is so we have to
+-- poll everybody.
+function TGUnit.PARTY_LOOT_METHOD_CHANGED()
+    for _, unit in pairs(TGUnit.unitList) do
+        unit:NotifyListeners(unit:Poll_LOOT_MASTER())
     end
 end
 
