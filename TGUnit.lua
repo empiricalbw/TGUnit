@@ -726,6 +726,17 @@ function TGUnit.RAID_TARGET_UPDATE()
     end
 end
 
+-- Handle UNIT_MODEL_CHANGED.  This fires when a unit's model changes.  The
+-- following units are notified of these changes:
+--
+--  player
+function TGUnit.UNIT_MODEL_CHANGED(id)
+    local unit = TGUnit.unitList[id]
+    if unit then
+        unit:NotifyListeners(TGU.FLAGS.MODEL)
+    end
+end
+
 -- Handle SPELLCAST events.  The typical chain of events goes as follows for a
 -- non-instant spell:
 --
