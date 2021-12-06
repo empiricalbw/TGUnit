@@ -594,11 +594,13 @@ end
 
 -- Update threat.
 function TGUnit:Poll_THREAT()
+    --print("Poll_THREAT: "..self.id)
     local isTanking, status, threatPct, rawThreatPct, threatValue
     if self.exists then
         isTanking, status, threatPct, rawThreatPct, threatValue =
             UnitDetailedThreatSituation("player", self.id)
     end
+    --print(self.exists, isTanking, status, threatPct, rawThreatPct, threatValue)
 
     if (isTanking    ~= self.threat.isTanking or
         status       ~= self.threat.status or
@@ -611,6 +613,35 @@ function TGUnit:Poll_THREAT()
         self.threat.threatPct    = threatPct
         self.threat.rawThreatPct = rawThreatPct
         self.threat.threatValue  = threatValue
+
+        if threatValue then
+            if threatValue < 0 then
+                self.threat.ceiling = "Fade"
+                self.threat.current = 0
+                self.threat.window  = 1
+            elseif threatPct > 0 then
+                self.threat.ceiling = floor((threatValue / threatPct) + 0.5)
+                if status == 3 then
+                    self.threat.current = self.threat.ceiling
+                else
+                    self.threat.current = floor((threatValue / 100) + 0.5)
+                end
+                self.threat.window = self.threat.ceiling - self.threat.current
+            else
+                self.threat.ceiling = nil
+                self.threat.current = nil
+                self.threat.window  = nil
+            end
+        else
+            self.threat.ceiling = nil
+            self.threat.current = nil
+            self.threat.window = nil
+        end
+
+        if rawThreatPct and rawThreatPct > 0 then
+            self.threat.ratio = threatPct / rawThreatPct
+        end
+
         return TGU.FLAGS.THREAT
     end
 
@@ -717,9 +748,21 @@ function TGUnit.GROUP_ROSTER_UPDATE()
             local unit = TGUnit.unitList[unitId]
             if unit ~= nil then
                 unit:Poll(unit.allFuncs)
+                print("GROUP_ROSTER_UPDATE: "..unit.id.." \""..
+                      tostring(unit.name).."\" \""..
+                      tostring(unit.class.localized).."\"")
             end
         end
     end
+end
+
+-- Handle name change.  We also trigger class lookups on this since the name
+-- can be "Unknown" and the class nil but there is no event to see when class
+-- becomes non-nil.
+function TGUnit:HandleNameChanged()
+    print("HandleNameChanged")
+    return bit.bor(self:Poll_NAME(),
+                   self:Poll_CLASS())
 end
 
 -- Handle PLAYER_REGEN_DISABLED.  This fires when we enter combat.  Do not use
@@ -928,7 +971,6 @@ end
 local TGUNIT_STANDARD_PROPERTIES = {
     {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
     {"NAME",            "name",             UnitName},
-    --{"CLASS",           "class",            UnitClass},
     {"LEVEL",           "level",            UnitLevel},
     {"COMBAT",          "combat",           UnitAffectingCombat},
     {"REACTION",        "reaction",         UnitGetReaction},
@@ -955,7 +997,7 @@ end
 -- then notify the appropriate listeners, so can also be generated
 -- programatically.
 local TGUNIT_STANDARD_EVENTS = {
-    {"UNIT_NAME_UPDATE",        TGUnit.Poll_NAME},
+    {"UNIT_NAME_UPDATE",        TGUnit.HandleNameChanged},
     {"UNIT_HEALTH_FREQUENT",    TGUnit.Poll_HEALTH},
     {"UNIT_MAXHEALTH",          TGUnit.Poll_HEALTH},
     {"UNIT_POWER_FREQUENT",     TGUnit.Poll_POWER},
