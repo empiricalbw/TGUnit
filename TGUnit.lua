@@ -159,6 +159,7 @@ function TGUnit:TGUnit(id)
     self.debuffCounts   = {Magic=0,Curse=0,Disease=0,Poison=0}
     self.indirectUnits  = {}
     self.listeners      = {}
+    self.maskListeners  = {}
 
     for i=1,32 do
         self.buffs[i]   = {}
@@ -173,10 +174,10 @@ function TGUnit:TGUnit(id)
         self.listeners["UPDATE_"..k] = {}
     end
 
-    local allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    local pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.allFuncs   = TGUnit.GenFuncs(allFlags)
-    self.pollFuncs  = TGUnit.GenFuncs(pollFlags)
+    self.allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.allFuncs  = TGUnit.GenFuncs(self.allFlags)
+    self.pollFuncs = TGUnit.GenFuncs(self.pollFlags)
 
     self:Poll(self.allFuncs)
 end
@@ -219,14 +220,20 @@ function TGUnit:AddListener(obj)
             obj[k](obj,self)
         end
     end
+
+    local f = obj.UPDATE_BITMASK
+    if f then
+        self.maskListeners[obj] = f
+        f(obj,self,self.allFlags)
+    end
 end
 
 -- Remove a listener from the unit.
 function TGUnit:RemoveListener(obj)
+    self.maskListeners[obj] = nil
+
     for k, v in pairs(self.listeners) do
-        if v[obj] then
-            v[obj] = nil
-        end
+        v[obj] = nil
     end
 end
 
@@ -241,6 +248,12 @@ function TGUnit:NotifyListeners(changedFlags)
             for obj, func in pairs(self.listeners[handler]) do
                 func(obj, self)
             end
+        end
+    end
+
+    for obj, func in pairs(self.maskListeners) do
+        if btst(changedFlags, obj.tguMask) then
+            func(obj, self, changedFlags)
         end
     end
 end
