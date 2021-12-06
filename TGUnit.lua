@@ -400,12 +400,8 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     auraCountsCache.Disease = 0
     auraCountsCache.Poison  = 0
     for i, aura in ipairs(auras) do
-        name,
-        texture,
-        applications,
-        auraType,
-        duration,
-        expirationTime = UnitAura(self.id, i, filter)
+        local name, texture, applications, auraType, duration, expirationTime =
+            UnitAura(self.id, i, filter)
 
         if (aura.name           ~= name or
             aura.texture        ~= texture or
