@@ -479,6 +479,7 @@ function TGUnit:Poll_PLAYER_SPELL()
 
     local spell, _, texture, startTime, endTime, _, castGUID = CastingInfo()
 
+    local spellType
     if spell ~= nil then
         spellType = "Casting"
     else
@@ -543,7 +544,7 @@ end
 function TGUnit:Poll_THREAT()
     local isTanking, status, threatPct, rawThreatPct, threatValue
     if self.exists then
-        isTanking, status, threatPct, rawThreatPt, threatValue =
+        isTanking, status, threatPct, rawThreatPct, threatValue =
             UnitDetailedThreatSituation("player", self.id)
     end
 
