@@ -30,7 +30,7 @@ TGU.FLAGS = {
     INHEALINGRANGE = bit.lshift(1, 20), -- True if the unit is in healing range
     CREATURETYPE   = bit.lshift(1, 21), -- Localized creature type or nil
     THREAT         = bit.lshift(1, 22), -- Player threat vs. unit
-    --ROLE           = bit.lshift(1, 23), -- ***
+    LOOT_MASTER    = bit.lshift(1, 23), -- Unit is loot master
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
     COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
@@ -68,6 +68,7 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.AFKSTATUS,
     TGU.FLAGS.THREAT,
+    TGU.FLAGS.LOOT_MASTER,
     TGU.FLAGS.MODEL)
 TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.REACTION,
