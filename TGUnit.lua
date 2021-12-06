@@ -129,7 +129,7 @@ function TGUnit:TGUnit(id)
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
-    self.class          = {localizedClass=nil,englishClass=nil}
+    self.class          = {localized=nil,name=nil,id=nil}
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
     self.power          = {type=nil,current=nil,max=nil}
@@ -353,6 +353,28 @@ function TGUnit:Poll_GUID()
 
     self.guid = guid
     return TGU.FLAGS.GUID
+end
+
+-- Update the class property and return a flag if it changed.
+function TGUnit:Poll_CLASS()
+    -- TODO: Check what UnitClass() returns if the unit doesn't exist.
+    local localized, name, id
+
+    if self.exists then
+        localized, name, id = UnitClass(self.id)
+    end
+
+    if (self.class.localized == localized and
+        self.class.name == name and
+        self.class.id == id)
+    then
+        return 0
+    end
+
+    self.class.localized = localized
+    self.class.name      = name
+    self.class.id        = id
+    return TGU.FLAGS.CLASS
 end
 
 -- Update the health property and return a flag if it changed.  We update both
@@ -851,7 +873,6 @@ end
 local TGUNIT_STANDARD_PROPERTIES = {
     {"ISPLAYERTARGET",  "isPlayerTarget",   UnitIsPlayerTarget},
     {"NAME",            "name",             UnitName},
-    {"CLASS",           "class",            UnitClass},
     {"LEVEL",           "level",            UnitLevel},
     {"COMBAT",          "combat",           UnitAffectingCombat},
     {"REACTION",        "reaction",         UnitGetReaction},
