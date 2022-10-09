@@ -724,6 +724,15 @@ function TGUnit.GROUP_ROSTER_UPDATE()
     end
 end
 
+-- Handle name change.  We also trigger class lookups on this since the name
+-- can be "Unknown" and the class nil but there is no event to see when class
+-- becomes non-nil.
+function TGUnit:HandleNameChanged()
+    print("HandleNameChanged")
+    return bit.bor(self:Poll_NAME(),
+                   self:Poll_CLASS())
+end
+
 -- Handle PLAYER_REGEN_DISABLED.  This fires when we enter combat.  Do not use
 -- PLAYER_ENTER_COMBAT for this which just checks if auto-attack is on.
 function TGUnit.PLAYER_REGEN_DISABLED()
@@ -956,7 +965,7 @@ end
 -- then notify the appropriate listeners, so can also be generated
 -- programatically.
 local TGUNIT_STANDARD_EVENTS = {
-    {"UNIT_NAME_UPDATE",        TGUnit.Poll_NAME},
+    {"UNIT_NAME_UPDATE",        TGUnit.HandleNameChanged},
     {"UNIT_HEALTH_FREQUENT",    TGUnit.Poll_HEALTH},
     {"UNIT_MAXHEALTH",          TGUnit.Poll_HEALTH},
     {"UNIT_POWER_FREQUENT",     TGUnit.Poll_POWER},
