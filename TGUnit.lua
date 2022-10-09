@@ -613,6 +613,35 @@ function TGUnit:Poll_THREAT()
         self.threat.threatPct    = threatPct
         self.threat.rawThreatPct = rawThreatPct
         self.threat.threatValue  = threatValue
+
+        if threatValue then
+            if threatValue < 0 then
+                self.threat.ceiling = "Fade"
+                self.threat.current = 0
+                self.threat.window  = 1
+            elseif threatPct > 0 then
+                self.threat.ceiling = floor((threatValue / threatPct) + 0.5)
+                if status == 3 then
+                    self.threat.current = self.threat.ceiling
+                else
+                    self.threat.current = floor((threatValue / 100) + 0.5)
+                end
+                self.threat.window = self.threat.ceiling - self.threat.current
+            else
+                self.threat.ceiling = nil
+                self.threat.current = nil
+                self.threat.window  = nil
+            end
+        else
+            self.threat.ceiling = nil
+            self.threat.current = nil
+            self.threat.window = nil
+        end
+
+        if rawThreatPct and rawThreatPct > 0 then
+            self.threat.ratio = threatPct / rawThreatPct
+        end
+
         return TGU.FLAGS.THREAT
     end
 
@@ -719,6 +748,9 @@ function TGUnit.GROUP_ROSTER_UPDATE()
             local unit = TGUnit.unitList[unitId]
             if unit ~= nil then
                 unit:Poll(unit.allFuncs)
+                print("GROUP_ROSTER_UPDATE: "..unit.id.." \""..
+                      tostring(unit.name).."\" \""..
+                      tostring(unit.class.localized).."\"")
             end
         end
     end
