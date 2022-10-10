@@ -272,7 +272,6 @@ TGU.CHANNELED_SPELL_IDS = {
     746,        -- First Aid
     13278,      -- Gnomnish Death Ray
     20577,      -- Cannibalize
-    10797,      -- Starshards
     16430,      -- Soul Tap
     24323,      -- Blood Siphon
     27640,      -- Baron Rivendare's Soul Drain
