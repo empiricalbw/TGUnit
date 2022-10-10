@@ -236,9 +236,7 @@ function TGUnit:RemoveListener(obj)
     self.maskListeners[obj] = nil
 
     for k, v in pairs(self.listeners) do
-        if v[obj] then
-            v[obj] = nil
-        end
+        v[obj] = nil
     end
 end
 
