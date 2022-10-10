@@ -345,7 +345,7 @@ end
 -- Update the health property and return a flag if it changed.  We update both
 -- current and max health here.
 function TGUnit:Poll_HEALTH()
-    -- UnitHealth and UnitHealthMax both return 0 if the target is not set.
+    -- UnitHealth and UnitHealthMax both return 0 if the unit doesn't exist.
     local current, max
 
     if self.exists then
@@ -365,8 +365,8 @@ end
 -- Update the power property and return a flag if it changed.  We update all
 -- parts of the power (current, max, type) here.
 function TGUnit:Poll_POWER()
-    -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the target is
-    -- not set.
+    -- UnitPowerType, UnitPower and UnitPowerMax all return 0 if the unit
+    -- doesn't exist.
     local current, max, typ
 
     if self.exists then
