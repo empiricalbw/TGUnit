@@ -276,7 +276,7 @@ function TGUnit:Poll(funcs)
 
     -- Update everything by running straight through the list of update
     -- functions.  We use addition for the logical OR operation since it is far
-    -- more efficient that bit.bor().
+    -- more efficient than bit.bor().
     for _, func in ipairs(funcs) do
         changedFlags = changedFlags + func(self)
     end
