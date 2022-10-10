@@ -572,11 +572,13 @@ end
 
 -- Update threat.
 function TGUnit:Poll_THREAT()
+    --print("Poll_THREAT: "..self.id)
     local isTanking, status, threatPct, rawThreatPct, threatValue
     if self.exists then
         isTanking, status, threatPct, rawThreatPct, threatValue =
             UnitDetailedThreatSituation("player", self.id)
     end
+    --print(self.exists, isTanking, status, threatPct, rawThreatPct, threatValue)
 
     if (isTanking    ~= self.threat.isTanking or
         status       ~= self.threat.status or
