@@ -269,9 +269,39 @@ TGU.LIVING_GHOST = 2      -- Unit is a ghost
 -- List of spell IDs that are channeled.  These are used to generate a list of
 -- channeled spell names used when parsing the combat log.
 TGU.CHANNELED_SPELL_IDS = {
-    746, 13278, 20577, 10797, 16430, 24323, 27640, 7290, 24322, 27177, 17401,
-    740, 20687, 6197, 1002, 1510, 136, 5143, 7268, 10, 12051, 15407, 2096, 605,
-    126, 689, 5138, 1120, 5740, 1949, 755, 17854, 6358,
+    746,        -- First Aid
+    13278,      -- Gnomnish Death Ray
+    20577,      -- Cannibalize
+    10797,      -- Starshards
+    16430,      -- Soul Tap
+    24323,      -- Blood Siphon
+    27640,      -- Baron Rivendare's Soul Drain
+    7290,       -- Soul Siphon
+    24322,      -- Blood Siphon
+    27177,      -- Defile
+    17401,      -- Hurricane
+    740,        -- Tranquility
+    20687,      -- Starfall
+    6197,       -- Eagle Eye
+    1002,       -- Eyes of the Beast
+    1510,       -- Volley
+    136,        -- Mend Pet
+    5143,       -- Arcane Missiles
+    7268,       -- Arcane Missile
+    10,         -- Blizzard
+    12051,      -- Evocation
+    15407,      -- Mind Flay
+    2096,       -- Mind Vision
+    605,        -- Mind Control
+    126,        -- Eye of Kilrogg
+    689,        -- Drain Life
+    5138,       -- Drain Mana
+    1120,       -- Drain Soul
+    5740,       -- Rain Of Fire
+    1949,       -- Hellfire
+    755,        -- Health Funnel
+    17854,      -- Consume Shadows
+    6358,       -- Seduction
 }
 TGU.CHANNELED_SPELL_NAME_TO_ID = {}
 for _, id in ipairs(TGU.CHANNELED_SPELL_IDS) do
