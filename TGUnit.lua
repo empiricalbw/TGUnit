@@ -473,8 +473,9 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
             changedAuras        = bit.bor(changedAuras, bit.lshift(1, i))
 
             -- Auras such as "Well Fed" or "Blood Pact" have types of nil.  It
-            -- could also be nil if the aura just doesn't exist.
-            if aura.auraType ~= nil then
+            -- could also be nil if the aura just doesn't exist.  Other auras
+            -- can have a type of "".
+            if auraType ~= nil and auraType ~= "" then
                 auraCountsCache[auraType] = auraCountsCache[auraType] + 1
             end
         end
