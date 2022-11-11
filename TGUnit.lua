@@ -452,15 +452,16 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     auraCountsCache.Disease = 0
     auraCountsCache.Poison  = 0
     for i, aura in ipairs(auras) do
-        local name, texture, applications, auraType, duration, expirationTime =
-            UnitAura(self.id, i, filter)
+        local name, texture, applications, auraType, duration, expirationTime,
+            source = UnitAura(self.id, i, filter)
 
         if (aura.name           ~= name or
             aura.texture        ~= texture or
             aura.applications   ~= applications or
             aura.auraType       ~= auraType or
             aura.duration       ~= duration or
-            aura.expirationTime ~= expirationTime)
+            aura.expirationTime ~= expirationTime or
+            aura.source         ~= source)
         then
             aura.name           = name
             aura.texture        = texture
@@ -468,6 +469,7 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
             aura.auraType       = auraType
             aura.duration       = duration
             aura.expirationTime = expirationTime
+            aura.source         = source
             changedAuras        = bit.bor(changedAuras, bit.lshift(1, i))
 
             -- Auras such as "Well Fed" or "Blood Pact" have types of nil.  It
