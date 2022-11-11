@@ -751,9 +751,6 @@ function TGUnit.GROUP_ROSTER_UPDATE()
             local unit = TGUnit.unitList[unitId]
             if unit ~= nil then
                 unit:Poll(unit.allFuncs)
-                print("GROUP_ROSTER_UPDATE: "..unit.id.." \""..
-                      tostring(unit.name).."\" \""..
-                      tostring(unit.class.localized).."\"")
             end
         end
     end
