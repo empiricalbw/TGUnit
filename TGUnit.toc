@@ -1,4 +1,4 @@
-## Interface: 20502
+## Interface: 30400
 ## Title: TGUnit
 ## Author: Holytoledo
 ## Version: 1.0
