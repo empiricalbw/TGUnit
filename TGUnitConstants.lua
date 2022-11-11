@@ -36,6 +36,7 @@ TGU.FLAGS = {
     COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
     AFKSTATUS      = bit.lshift(1, 27), -- Whether the unit is AFK or not
     MODEL          = bit.lshift(1, 28), -- Unit model
+    ROLE           = bit.lshift(1, 29), -- LFG role
 }
 
 -- Map names in the set "UPDATE_FOO" to the bit TGU.FLAGS.FOO.
@@ -80,7 +81,8 @@ TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.INHEALINGRANGE,
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.EXISTS,
-    TGU.FLAGS.GUID)
+    TGU.FLAGS.GUID,
+    TGU.FLAGS.ROLE)
 TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
 
 -- This bitmask describes the set of attributes for which the game engine
@@ -115,7 +117,8 @@ TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.THREAT,
     TGU.FLAGS.EXISTS,
-    TGU.FLAGS.GUID)
+    TGU.FLAGS.GUID,
+    TGU.FLAGS.ROLE)
 TGU.ALL_NONPLAYER_FLAGS = bit.bor(TGU.NONPLAYEREVENT_MASK,
                                   TGU.NONPLAYERPOLL_MASK)
 
