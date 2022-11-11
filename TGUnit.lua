@@ -966,6 +966,7 @@ local TGUNIT_STANDARD_PROPERTIES = {
     {"ISVISIBLE",       "isVisible",        UnitGetIsVisible},
     {"INHEALINGRANGE",  "inHealingRange",   UnitGetInHealingRange},
     {"CREATURETYPE",    "creatureType",     UnitCreatureType},
+    {"ROLE",            "role",             UnitGroupRolesAssigned},
 }
 for _, prop in ipairs(TGUNIT_STANDARD_PROPERTIES) do
     local flag, field, getter = unpack(prop)
