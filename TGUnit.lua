@@ -133,8 +133,7 @@ function TGUnit:TGUnit(id)
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
     self.power          = {type=nil,current=nil,max=nil}
-    self.playerCastInfo = {}
-    self.logCastInfo    = {}
+    self.castInfo       = {}
     self.level          = nil
     self.combat         = nil
     self.leader         = nil
@@ -524,15 +523,10 @@ function TGUnit:HandleAurasChanged()
                    self:Poll_DEBUFFS())
 end
 
--- Update the player's spellcast.  In Classic, only the player's spellcast can
--- be queried programatically.  We do receive events in the combat log for when
--- other units start casting and if their casts caused damage but we don't get
--- events for all ways in which units can stop casting, so we split the player's
--- queryable cast info out from combat log cast info.
-function TGUnit:Poll_PLAYER_SPELL()
-    assert(self.id == "player")
-
-    local spell, _, texture, startTime, endTime, _, castGUID = CastingInfo()
+-- Update the unit's spellcast.
+function TGUnit:Poll_SPELL()
+    local spell, _, texture, startTime, endTime, _, castGUID =
+        UnitCastingInfo(self.id)
 
     local spellType
     if spell ~= nil then
@@ -544,7 +538,7 @@ function TGUnit:Poll_PLAYER_SPELL()
         -- displays "Channeling" for a channeled spell.  So we probably want
         -- to use the spell name instead of the display name.
         castGUID = nil
-        spell, _, texture, startTime, endTime = ChannelInfo()
+        spell, _, texture, startTime, endTime = UnitChannelInfo(self.id)
 
         if spell ~= nil then
             spellType = "Channeling"
@@ -558,41 +552,23 @@ function TGUnit:Poll_PLAYER_SPELL()
         endTime = endTime / 1000.0
     end
 
-    local changed = (spellType    ~= self.playerCastInfo.spellType or
-                     spell        ~= self.playerCastInfo.spell or
-                     texture      ~= self.playerCastInfo.texture or
-                     startTime    ~= self.playerCastInfo.startTime or
-                     endTime      ~= self.playerCastInfo.endTime or
-                     castGUID     ~= self.playerCastInfo.castGUID)
+    local changed = (spellType ~= self.castInfo.spellType or
+                     spell     ~= self.castInfo.spell or
+                     texture   ~= self.castInfo.texture or
+                     startTime ~= self.castInfo.startTime or
+                     endTime   ~= self.castInfo.endTime or
+                     castGUID  ~= self.castInfo.castGUID)
     if changed then
-        self.playerCastInfo.spellType    = spellType
-        self.playerCastInfo.spell        = spell
-        self.playerCastInfo.texture      = texture
-        self.playerCastInfo.startTime    = startTime
-        self.playerCastInfo.endTime      = endTime
-        self.playerCastInfo.castGUID     = castGUID
-        return TGU.FLAGS.PLAYER_SPELL
+        self.castInfo.spellType = spellType
+        self.castInfo.spell     = spell
+        self.castInfo.texture   = texture
+        self.castInfo.startTime = startTime
+        self.castInfo.endTime   = endTime
+        self.castInfo.castGUID  = castGUID
+        return TGU.FLAGS.SPELL
     end
 
     return 0
-end
-
--- Update a unit's combat log spellcast.  Since we can't actually poll anything
--- from the Classic client about non-player units, this method needs to take
--- the spell state as method arguments.
-function TGUnit:Update_COMBAT_SPELL(timestamp, spell)
-    local changed = (timestamp ~= self.logCastInfo.timestamp or
-                     spell ~= self.logCastInfo.spell)
-    if changed then
-        self.logCastInfo.timestamp = timestamp
-        self.logCastInfo.spell     = spell
-        return TGU.FLAGS.COMBAT_SPELL
-    end
-
-    return 0
-end
-function TGUnit:Poll_COMBAT_SPELL()
-    return self:Update_COMBAT_SPELL(nil, nil)
 end
 
 -- Update threat.
@@ -885,24 +861,10 @@ end
 --                                completes)
 --      ...tick, tick, tick...
 --      UNIT_SPELLCAST_CHANNEL_STOP (with castGUID == nil)
---
--- Note: None of these events seem to fire for hostile targets (tested on
--- Defias Pillager casters).  They may fire for party and raid members.  They
--- also don't fire for the Warlock imp firebolt spell (and probably other
--- spells) - even when we have the pet selected as our target while it is
--- casting.
---
--- Quirk: If the unit is "target" and the target is "player", then we get these
--- events for the "target" unit as well.  This may also be the case for other
--- units.  We discard them if they aren't for the actual player unit.
 function TGUnit.HandleUnitSpellcastEvent(unitId, castGUID, spellID)
-    if unitId ~= "player" then
-        return
-    end
-
     local unit = TGUnit.unitList[unitId]
     if unit ~= nil then
-        unit:NotifyListeners(unit:Poll_PLAYER_SPELL())
+        unit:NotifyListeners(unit:Poll_SPELL())
     end
 end
 TGUnit.UNIT_SPELLCAST_START          = TGUnit.HandleUnitSpellcastEvent
@@ -911,40 +873,6 @@ TGUnit.UNIT_SPELLCAST_DELAYED        = TGUnit.HandleUnitSpellcastEvent
 TGUnit.UNIT_SPELLCAST_CHANNEL_START  = TGUnit.HandleUnitSpellcastEvent
 TGUnit.UNIT_SPELLCAST_CHANNEL_STOP   = TGUnit.HandleUnitSpellcastEvent
 TGUnit.UNIT_SPELLCAST_CHANNEL_UPDATE = TGUnit.HandleUnitSpellcastEvent
-
-function TGUnit.COMBAT_LOG_EVENT_UNFILTERED()
-    TGUnit.Parse_COMBAT_LOG_EVENT_UNFILTERED(CombatLogGetCurrentEventInfo())
-end
-function TGUnit.Parse_COMBAT_LOG_EVENT_UNFILTERED(...)
-    local timestamp, event, _, sourceGUID, _, _, _, destGUID, _, _, _,
-          _, spellName = ...
-
-    if (event == "SPELL_CAST_START" or
-        event == "SPELL_CAST_SUCCESS" or
-        event == "SPELL_CAST_FAILED")
-    then
-        local start
-        if event == "SPELL_CAST_START" then
-            start = true
-        elseif event == "SPELL_CAST_SUCCESS" then
-            start = (TGU.CHANNELED_SPELL_NAME_TO_ID[spellName] ~= nil)
-        elseif event == "SPELL_CAST_FAILED" then
-            start = false
-        end
-
-        local guidUnits = TGUnit.guidList[sourceGUID]
-        if guidUnits ~= nil then
-            for unit in pairs(guidUnits) do
-                if start then
-                    unit:NotifyListeners(unit:Update_COMBAT_SPELL(timestamp,
-                                                                  spellName))
-                else
-                    unit:NotifyListeners(unit:Update_COMBAT_SPELL(nil, nil))
-                end
-            end
-        end
-    end
-end
 
 -- Debug function to print the unit list.
 function TGUnit.PrintUnitList()

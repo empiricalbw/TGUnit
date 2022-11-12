@@ -17,7 +17,7 @@ TGU.FLAGS = {
     COMBAT         = bit.lshift(1,  7), -- In combat or not
     BUFFS          = bit.lshift(1,  8), -- Unit buffs
     DEBUFFS        = bit.lshift(1,  9), -- Unit debuffs
-    PLAYER_SPELL   = bit.lshift(1, 10), -- Spell being cast by the player
+    SPELL          = bit.lshift(1, 10), -- Spell cast
     REACTION       = bit.lshift(1, 11), -- Friendly, neutral or hostile
     LEADER         = bit.lshift(1, 12), -- Unit is group or raid leader
     RAIDICON       = bit.lshift(1, 13), -- Unit's raid icon num or nil if none
@@ -33,7 +33,7 @@ TGU.FLAGS = {
     LOOT_MASTER    = bit.lshift(1, 23), -- Unit is loot master
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
-    COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
+    -- Unused:       26
     AFKSTATUS      = bit.lshift(1, 27), -- Whether the unit is AFK or not
     MODEL          = bit.lshift(1, 28), -- Unit model
     ROLE           = bit.lshift(1, 29), -- LFG role
@@ -63,7 +63,7 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS,
-    TGU.FLAGS.PLAYER_SPELL,
+    TGU.FLAGS.SPELL,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
@@ -98,11 +98,11 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.LEVEL,
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS,
+    TGU.FLAGS.SPELL,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.AFKSTATUS,
-    TGU.FLAGS.COMBAT_SPELL,
     TGU.FLAGS.MODEL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     --TGU.FLAGS.COMBOPOINTS,
@@ -268,47 +268,6 @@ TGU.PVP_FFA_FLAGGED = 2   -- PVP free-for-all flagged
 TGU.LIVING_ALIVE = 0      -- Unit is alive
 TGU.LIVING_DEAD  = 1      -- Unit is dead
 TGU.LIVING_GHOST = 2      -- Unit is a ghost
-
--- List of spell IDs that are channeled.  These are used to generate a list of
--- channeled spell names used when parsing the combat log.
-TGU.CHANNELED_SPELL_IDS = {
-    746,        -- First Aid
-    13278,      -- Gnomnish Death Ray
-    20577,      -- Cannibalize
-    16430,      -- Soul Tap
-    24323,      -- Blood Siphon
-    27640,      -- Baron Rivendare's Soul Drain
-    7290,       -- Soul Siphon
-    24322,      -- Blood Siphon
-    27177,      -- Defile
-    17401,      -- Hurricane
-    740,        -- Tranquility
-    20687,      -- Starfall
-    6197,       -- Eagle Eye
-    1002,       -- Eyes of the Beast
-    1510,       -- Volley
-    136,        -- Mend Pet
-    5143,       -- Arcane Missiles
-    7268,       -- Arcane Missile
-    10,         -- Blizzard
-    12051,      -- Evocation
-    15407,      -- Mind Flay
-    2096,       -- Mind Vision
-    605,        -- Mind Control
-    126,        -- Eye of Kilrogg
-    689,        -- Drain Life
-    5138,       -- Drain Mana
-    1120,       -- Drain Soul
-    5740,       -- Rain Of Fire
-    1949,       -- Hellfire
-    755,        -- Health Funnel
-    17854,      -- Consume Shadows
-    6358,       -- Seduction
-}
-TGU.CHANNELED_SPELL_NAME_TO_ID = {}
-for _, id in ipairs(TGU.CHANNELED_SPELL_IDS) do
-    TGU.CHANNELED_SPELL_NAME_TO_ID[GetSpellInfo(id)] = id
-end
 
 -- List of spells we use to test if units are in healing range.
 TGU.HEALING_RANGE_TABLE = {
