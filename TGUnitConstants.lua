@@ -312,7 +312,7 @@ end
 
 -- List of spells we use to test if units are in healing range.
 TGU.HEALING_RANGE_TABLE = {
-    ["PRIEST"]  = "Heal",
+    ["PRIEST"]  = "Lesser Heal",
     ["DRUID"]   = "Healing Touch",
     ["PALADIN"] = "Holy Light",
     ["SHAMAN"]  = "Healing Wave",
