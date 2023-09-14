@@ -154,9 +154,9 @@ function TGUnit:TGUnit(id)
     self.threat         = {isTanking=nil,status=nil,threatPct=nil,
                            rawThreatPct=nil,threatValue=nil}
     self.buffs          = {}
-    self.buffCounts     = {Magic=0,Curse=0,Disease=0,Posion=0}
+    self.buffCounts     = {Magic=0,Curse=0,Disease=0,Posion=0,Enrage=0}
     self.debuffs        = {}
-    self.debuffCounts   = {Magic=0,Curse=0,Disease=0,Poison=0}
+    self.debuffCounts   = {Magic=0,Curse=0,Disease=0,Poison=0,Enrage=0}
     self.indirectUnits  = {}
     self.listeners      = {}
     self.maskListeners  = {}
@@ -439,7 +439,7 @@ end
 
 -- Poll the set of auras using the specified filter and return a bitmask of any
 -- that have changed.  Also return a flag if any counts have changed.
-local auraCountsCache = {Magic=0,Curse=0,Disease=0,Poison=0};
+local auraCountsCache = {Magic=0,Curse=0,Disease=0,Poison=0,Enrage=0}
 function TGUnit:PollAuras(auras, auraCounts, filter)
     -- UnitAura() returns nil if the unit doesn't exist or the aura doesn't
     -- exist.
@@ -448,6 +448,7 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     auraCountsCache.Curse   = 0
     auraCountsCache.Disease = 0
     auraCountsCache.Poison  = 0
+    auraCountsCache.Enrage  = 0
     for i, aura in ipairs(auras) do
         local name, texture, applications, auraType, duration, expirationTime,
             source = UnitAura(self.id, i, filter)
@@ -471,9 +472,12 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
         end
 
         -- Auras such as "Well Fed" or "Blood Pact" have types of nil.  It
-        -- could also be nil if the aura just doesn't exist.  Other auras
-        -- can have a type of "".
-        if auraType ~= nil and auraType ~= "" then
+        -- could also be nil if the aura just doesn't exist.  Tranquilizable
+        -- enrage auras have a type of "".
+        if auraType ~= nil then
+            if auraType == "" then
+                auraType = "Enrage"
+            end
             auraCountsCache[auraType] = auraCountsCache[auraType] + 1
         end
     end
