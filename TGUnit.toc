@@ -11,5 +11,7 @@
 TGDebugging.lua
 TGUnitConstants.lua
 TGUnit.lua
+TGUnitAura.lua
+TGUnitAuraDB.lua
 
 TGTest.lua
