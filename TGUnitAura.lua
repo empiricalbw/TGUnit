@@ -151,7 +151,7 @@ function TGUnitEventCast:new(timestamp, castGUID, spellID)
     cast.castGUID   = castGUID
     cast.spellID    = spellID
     cast.spellName  = GetSpellInfo(spellID)
-    cast.castInfo   = TGSpellDB.OT_CAST_INFO[spellID]
+    cast.duration   = TGUnit.AuraDuration[spellID]
 
     return cast
 end
@@ -305,7 +305,7 @@ function TGUA.UNIT_SPELLCAST_SUCCEEDED(unit, castGUID, spellID)
 
     -- Push the spellcast if we care about it.
     local event_cast = TGUnitEventCast:new(GetTime(), castGUID, spellID)
-    if event_cast.castInfo then
+    if event_cast.duration then
         TGUA.PushEventCast(event_cast)
     else
         event_cast:free()
@@ -321,7 +321,7 @@ function TGUA.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
         return
     end
 
-    if TGSpellDB.OVER_TIME_SPELL_LIST[spellName] then
+    if TGUnit.AuraNames[spellName] then
         local cleu_cast = TGUnitCLEUCast:new(cleu_timestamp,
                                              "SPELL_CAST_SUCCESS", targetGUID,
                                              targetName, spellName)
@@ -341,7 +341,7 @@ function TGUA.CLEU_SPELL_MISSED(cleu_timestamp, _, sourceGUID, _, _, _,
         return
     end
 
-    if TGSpellDB.OVER_TIME_SPELL_LIST[spellName] then
+    if TGUnit.AuraNames[spellName] then
         local cleu_cast = TGUnitCLEUCast:new(cleu_timestamp, "SPELL_MISSED",
                                              targetGUID, targetName, spellName)
         TGUA.PushCLEUCast(cleu_cast)
@@ -377,9 +377,7 @@ function TGUA.OnUpdate()
     repeat
         removedOne = false
         for k, v in ipairs(TGUA.tracked_spells) do
-            if (v.event_cast.timestamp + v.event_cast.castInfo.length <=
-                currTime)
-            then
+            if v.event_cast.timestamp + v.event_cast.duration <= currTime then
                 local meta_cast = table.remove(TGUA.tracked_spells, k)
                 meta_cast.event_cast:free()
                 meta_cast.cleu_cast:free()
@@ -392,13 +390,11 @@ end
 
 function TGUA.GetAuraInfoBySpellID(targetGUID, spellID)
     if spellID == nil then
-        print("spellID was nil.")
         return 0, 0
     end
 
     local duration = TGUnit.AuraDuration[spellID]
     if duration == nil then
-        print("Duration for "..spellID.." was nil.")
         return 0, 0
     end
 
@@ -410,7 +406,6 @@ function TGUA.GetAuraInfoBySpellID(targetGUID, spellID)
         end
     end
 
-    print("Aura info not found: "..targetGUID.." "..spellID)
     return 0, 0
 end
 

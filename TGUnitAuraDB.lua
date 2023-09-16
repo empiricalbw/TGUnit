@@ -20,6 +20,29 @@ TGUnit.AuraDuration = {
     [10929] = 15,
     [25315] = 15,
 
+    -- Power Word: Fortitude
+    [1243]  = 60*30,
+    [1244]  = 60*30,
+    [1245]  = 60*30,
+    [2791]  = 60*30,
+    [10937] = 60*30,
+    [10938] = 60*30,
+
+    -- Power Word: Shield
+    [17]    = 30,
+    [592]   = 30,
+    [600]   = 30,
+    [3747]  = 30,
+    [6065]  = 30,
+    [6066]  = 30,
+    [10898] = 30,
+    [10899] = 30,
+    [10900] = 30,
+    [10901] = 30,
+
+    -- Weakend Soul
+    [6788]  = 15,
+
     -- Shadow Word: Pain
     [589]   = 18 + 3*improvedSWPRank,
     [594]   = 18 + 3*improvedSWPRank,
@@ -29,12 +52,6 @@ TGUnit.AuraDuration = {
     [10892] = 18 + 3*improvedSWPRank,
     [10893] = 18 + 3*improvedSWPRank,
     [10894] = 18 + 3*improvedSWPRank,
-
-    -- Vampiric Touch
-    [34914] = {length = 15},
-    [34916] = {length = 15},
-    [34917] = {length = 15},
-
 
     -- ************************ Warrior Spells ***************************
     -- Rend
@@ -63,7 +80,6 @@ TGUnit.AuraDuration = {
     [11667] = 15,
     [11668] = 15,
     [25309] = 15,
-    [27215] = 15,
 
     -- Corruption
     [172]   = 12,
@@ -73,7 +89,6 @@ TGUnit.AuraDuration = {
     [11671] = 18,
     [11672] = 18,
     [25311] = 18,
-    [27216] = 18,
 
     -- Curse of Agony
     [980]   = 24,
@@ -82,7 +97,6 @@ TGUnit.AuraDuration = {
     [11711] = 24,
     [11712] = 24,
     [11713] = 24,
-    [27218] = 24,
 
     -- Siphon Life
     [18265] = 30,
@@ -94,3 +108,13 @@ TGUnit.AuraDuration = {
     [710]   = 30,
     [18647] = 30,
 }
+
+TGUnit.AuraNames = {}
+for k in pairs(TGUnit.AuraDuration) do
+    local name = GetSpellInfo(k)
+    if name == nil then
+        print("No name for spell "..k.."!")
+    else
+        TGUnit.AuraNames[GetSpellInfo(k)] = 1
+    end
+end
