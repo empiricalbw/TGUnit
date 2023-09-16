@@ -29,6 +29,26 @@
 --  2       UNIT_SPELLCAST_STOP             castGUID, spellID
 --  2       CLEU_SPELL_CAST_SUCCESS         sourceGUID, targetGUID, spellName
 --
+-- Here's Fireball, which is cast, has travel time and then finally applies a
+-- debuff and damages the target:
+--
+--  0       UNIT_SPELLCAST_SENT
+--  0       UNIT_SPELLCAST_START
+--  0       CLEU_SPELL_CAST_START
+--  1       UNIT_SPELLCAST_SUCCEEDED
+--  1       UNIT_SPELLCAST_STOP
+--  1       CLEU_SPELL_CAST_SUCCESS
+--  2       CLEU_SPELL_AURA_APPLIED
+--  2       CLEU_SPELL_CAST_DAMAGE
+--
+-- Here's Shadow Word: Pain, which is instant cast, has no travel time and then
+-- finally applies a debuff but no direct damage to the target:
+--
+--  0       UNIT_SPELLCAST_SENT
+--  0       UNIT_SPELLCAST_SUCCEEDED
+--  0       CLEU_SPELL_CAST_SUCCESS
+--  0       CLEU_SPELL_AURA_APPLIED
+--
 -- Here's Summon Imp, which is purely cast with no offensive component:
 --
 --  0       UNIT_SPELLCAST_SENT             castGUID, spellID
@@ -137,6 +157,7 @@ TGUnitEventCast.__index = TGUnitEventCast
 TGUnitEventCast.free_casts = {}
 
 function TGUnitEventCast:new(timestamp, castGUID, spellID)
+    -- Event cast timestamps are as returned from GetTime().
     local cast
     if #TGUnitEventCast.free_casts > 0 then
         cast = table.remove(TGUnitEventCast.free_casts)
@@ -168,6 +189,7 @@ TGUnitCLEUCast.__index = TGUnitCLEUCast
 TGUnitCLEUCast.free_casts = {}
 
 function TGUnitCLEUCast:new(timestamp, event, targetGUID, targetName, spellName)
+    -- CLEU timestamps are Unix time.
     local cast
     if #TGUnitCLEUCast.free_casts > 0 then
         cast = table.remove(TGUnitCLEUCast.free_casts)
@@ -177,12 +199,13 @@ function TGUnitCLEUCast:new(timestamp, event, targetGUID, targetName, spellName)
         setmetatable(cast, self)
     end
 
-    cast.allocated  = true
-    cast.timestamp  = timestamp
-    cast.event      = event
-    cast.targetGUID = targetGUID
-    cast.targetName = targetName
-    cast.spellName  = spellName
+    cast.allocated    = true
+    cast.timestamp    = timestamp
+    cast.gt_timestamp = GetTime()
+    cast.event        = event
+    cast.targetGUID   = targetGUID
+    cast.targetName   = targetName
+    cast.spellName    = spellName
 
     return cast
 end
@@ -247,6 +270,12 @@ function TGUA.ProcessCastFIFO()
         print(cleu_cast.spellName)
     end
     assert(event_cast.spellName == cleu_cast.spellName)
+    if event_cast.timestamp ~= cleu_cast.gt_timestamp then
+        print("event_cast.timestamp "..event_cast.timestamp..
+              " cleu_cast.timestamp "..cleu_cast.timestamp..
+              " cleu_cast.gt_timestamp "..cleu_cast.gt_timestamp)
+    end
+    assert(event_cast.timestamp == cleu_cast.gt_timestamp)
 
     if cleu_cast.event ~= "SPELL_CAST_SUCCESS" then
         print("ProcessCastFIFO: CLEU event was "..cleu_cast.event)
