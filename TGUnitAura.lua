@@ -49,6 +49,23 @@
 --  0       CLEU_SPELL_CAST_SUCCESS
 --  0       CLEU_SPELL_AURA_APPLIED
 --
+-- Here's Shadow Word: Pain, but when the aura already exists on the target:
+--
+--  0       UNIT_SPELLCAST_SENT
+--  0       UNIT_SPELLCAST_SUCCEEDED
+--  0       CLEU_SPELL_CAST_SUCCESS
+--  0       CLEU_SPELL_AURA_REFRESH
+--
+-- Here's Shadow Word: Pain, but when it is resisted.
+--
+--  0       UNIT_SPELLCAST_SENT
+--  0       UNIT_SPELLCAST_SUCCEEDED
+--  0       CLEU_SPELL_CAST_SUCCESS
+--  0       CLEU_SPELL_MISSED
+--
+-- The difference here is that CLEU_SPELL_AURA_APPLIED/REFRESH is replaced with
+-- CLEU_SPELL_MISSED.
+--
 -- Here's Summon Imp, which is purely cast with no offensive component:
 --
 --  0       UNIT_SPELLCAST_SENT             castGUID, spellID
@@ -138,7 +155,11 @@
 -- source can be nil and probably we shouldn't keep track of anything except
 -- if the source was "player".
 
+TGUA_TRACKED_AURAS_DB = {version = 1, realms = {}}
+
 local TGUA = {
+    -- tracked_spells is a two-level hash.  The first key is a target GUID,
+    -- and the second key is a spell name.
     tracked_spells = {},
     cast_frame     = nil,
     spell_frames   = {},
@@ -148,6 +169,7 @@ local TGUA = {
 
     event_casts    = {},
     cleu_casts     = {},
+    aura_updates   = {},
 }
 TGUnit.AuraTracker = TGUA
 
@@ -172,7 +194,7 @@ function TGUnitEventCast:new(timestamp, castGUID, spellID)
     cast.castGUID   = castGUID
     cast.spellID    = spellID
     cast.spellName  = GetSpellInfo(spellID)
-    cast.duration   = TGUnit.AuraDuration[spellID]
+    cast.duration   = TGUnit.AuraDB.AuraDurations[spellID]
 
     return cast
 end
@@ -222,6 +244,119 @@ function TGUnitCLEUCast:dump()
           " cast on "..self.targetName.." "..self.targetGUID)
 end
 
+-- An amalgamated type that merges information from the CLEU cast and from the
+-- event cast.
+local TGUnitCast = {}
+TGUnitCast.__index = TGUnitCast
+TGUnitCast.free_casts = {}
+
+function TGUA.ADDON_LOADED(addOnName)
+    if addOnName ~= "TGUnit" then
+        return
+    end
+
+    local rf = GetRealmName()..":"..UnitFactionGroup("player")
+    local ts = TGUA_TRACKED_AURAS_DB.realms[rf] or {}
+    TGUA.tracked_spells = ts
+    TGUA_TRACKED_AURAS_DB.realms[rf] = ts
+    for targetGUID, targetCasts in pairs(ts) do
+        for spellName, targetCast in pairs(targetCasts) do
+            assert(TGUnitCast ~= nil)
+            setmetatable(targetCast, TGUnitCast)
+        end
+    end
+end
+
+function TGUnitCast:new(event_cast, cleu_cast)
+    assert(event_cast.timestamp == cleu_cast.gt_timestamp)
+
+    local cast
+    if #TGUnitCast.free_casts > 0 then
+        cast = table.remove(TGUnitCast.free_casts)
+        assert(cast.allocated == false)
+    else
+        cast = {}
+        setmetatable(cast, self)
+    end
+
+    cast.allocated      = true
+    cast.auraApplied    = false
+    cast.timestamp      = event_cast.timestamp
+    cast.unix_timestamp = cleu_cast.timestamp
+    cast.castGUID       = event_cast.castGUID
+    cast.spellID        = event_cast.spellID
+    cast.spellName      = event_cast.spellName
+    cast.auraDuration   = event_cast.duration
+    cast.targetGUID     = cleu_cast.targetGUID
+    cast.targetName     = cleu_cast.targetName
+
+    return cast
+end
+
+function TGUnitCast:free()
+    assert(self.allocated == true)
+    self.allocated = false
+    table.insert(TGUnitCast.free_casts, self)
+end
+
+function TGUA.TrackCast(cast)
+    local targetCasts = TGUA.tracked_spells[cast.targetGUID]
+    if targetCasts == nil then
+        targetCasts = {}
+        TGUA.tracked_spells[cast.targetGUID] = targetCasts
+    end
+
+    local targetCast = targetCasts[cast.spellName]
+    if targetCast ~= nil then
+        targetCast:free()
+    end
+
+    targetCasts[cast.spellName] = cast
+end
+
+function TGUA.PurgeGUID(guid)
+    local targetCasts = TGUA.tracked_spells[guid]
+    if targetCasts == nil then
+        return
+    end
+
+    for _, v in pairs(targetCasts) do
+        v:free()
+    end
+    TGUA.tracked_spells[guid] = nil
+end
+
+--[[
+function TGUnitCast.PurgeAndFreeCast(cast)
+    local targetCasts = TGUA.tracked_spells[cast.targetGUID]
+    if targetCasts ~= nil then
+        if targetCasts[cast.spellName] == cast then
+            targetCasts[cast.spellName] = nil
+            if next(targetCasts) == nil then
+                TGUA.tracked_spells[cast.targetGUID] = nil
+            end
+        end
+    end
+    cast:free()
+end
+]]
+
+function TGUA.PurgeExpiredCasts()
+    local currTime = GetTime()
+    for targetGUID, targetCasts in pairs(TGUA.tracked_spells) do
+        for spellName, targetCast in pairs(targetCasts) do
+            if (targetCast.timestamp + targetCast.auraDuration + 10 <= currTime)
+            then
+                targetCasts[spellName] = nil
+                targetCast:free()
+            end
+        end
+        if next(targetCasts) == nil then
+            TGUA.tracked_spells[targetGUID] = nil
+        end
+    end
+end
+
 local function dbg(...)
     local timestamp = GetTime()
     if timestamp ~= TGUA.log_timestamp then
@@ -265,7 +400,7 @@ function TGUA.ProcessCastFIFO()
 
     local event_cast = table.remove(TGUA.event_casts, 1)
     local cleu_cast  = table.remove(TGUA.cleu_casts, 1)
-    if (event_cast.spellName ~= cleu_cast.spellName) then
+    if event_cast.spellName ~= cleu_cast.spellName then
         print(event_cast.spellName)
         print(cleu_cast.spellName)
     end
@@ -284,32 +419,13 @@ function TGUA.ProcessCastFIFO()
         return
     end
 
-    local meta_cast = {
-        event_cast = event_cast,
-        cleu_cast  = cleu_cast,
-    }
-
-    -- Check if we are refreshing a spell.
-    local refreshed = false
-    for k, v in ipairs(TGUA.tracked_spells) do
-        if (v.event_cast.spellID   == meta_cast.event_cast.spellID and
-            v.cleu_cast.targetGUID == meta_cast.cleu_cast.targetGUID) then
-            v.event_cast:free()
-            v.cleu_cast:free()
-            TGUA.tracked_spells[k] = meta_cast
-            refreshed = true
-            break
-        end
-    end
-
-    -- If we aren't refreshing, insert the new one.
-    if not refreshed then
-        table.insert(TGUA.tracked_spells, meta_cast)
-    end
+    local cast = TGUnitCast:new(event_cast, cleu_cast)
+    TGUA.TrackCast(cast)
+    event_cast:free()
+    cleu_cast:free()
 
     -- Notify the core that a tracked spell has changed.
-    TGUnit.TrackedAurasChanged(meta_cast.cleu_cast.targetGUID,
-                               meta_cast.event_cast.spellID)
+    TGUnit.TrackedAurasChanged(cast.targetGUID, cast.spellID)
 end
 
 function TGUA.DumpCastFIFO()
@@ -322,6 +438,27 @@ function TGUA.DumpCastFIFO()
     for _, v in ipairs(TGUA.cleu_casts) do
         print("   "..v.spellName)
     end
+end
+
+function TGUA.ProcessAuraUpdates()
+    if #TGUA.aura_updates == 0 then
+        return
+    end
+
+    for _, v in ipairs(TGUA.aura_updates) do
+        local cast = TGUA.GetCastBySpellName(v.targetGUID, v.spellName)
+        if cast ~= nil then
+            if v.refresh or not cast.auraApplied then
+                --print("Found cast for: ", v.spellName)
+                cast.timestamp = v.timestamp
+                cast.auraApplied = true
+                TGUnit.TrackedAurasChanged(v.targetGUID)
+            end
+        else
+            --print("No cast for: ", v.spellName)
+        end
+    end
+    TGUA.aura_updates = {}
 end
 
 function TGUA.UNIT_SPELLCAST_SUCCEEDED(unit, castGUID, spellID)
@@ -350,12 +487,20 @@ function TGUA.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
         return
     end
 
-    if TGUnit.AuraNames[spellName] then
+    if TGUnit.AuraDB.AuraNames[spellName] then
         local cleu_cast = TGUnitCLEUCast:new(cleu_timestamp,
                                              "SPELL_CAST_SUCCESS", targetGUID,
                                              targetName, spellName)
         TGUA.PushCLEUCast(cleu_cast)
     end
+end
+
+function TGUA.CLEU_SPELL_CAST_FAILED(cleu_timestamp, _, sourceGUID, _, _, _,
+                                     targetGUID, targetName, _, _, _,
+                                     spellName, _, failedType)
+    dbg("CLEU_SPELL_CAST_FAILED sourceGUID: ", sourceGUID, " targetGUID: ",
+        targetGUID, " targetName: ", targetName, " spellName: ", spellName,
+        " failedType: ", failedType)
 end
 
 function TGUA.CLEU_SPELL_MISSED(cleu_timestamp, _, sourceGUID, _, _, _,
@@ -370,72 +515,120 @@ function TGUA.CLEU_SPELL_MISSED(cleu_timestamp, _, sourceGUID, _, _, _,
         return
     end
 
-    if TGUnit.AuraNames[spellName] then
+    if TGUnit.AuraDB.AuraNames[spellName] then
         local cleu_cast = TGUnitCLEUCast:new(cleu_timestamp, "SPELL_MISSED",
                                              targetGUID, targetName, spellName)
         TGUA.PushCLEUCast(cleu_cast)
     end
 end
 
+function TGUA.CLEU_SPELL_AURA_APPLIED(cleu_timestamp, _, sourceGUID, _, _, _,
+                                      targetGUID, targetName, _, _, spellId,
+                                      spellName, _, auraType, amount)
+    if sourceGUID ~= UnitGUID("player") then
+        return
+    end
+    dbg("CLEU_SPELL_AURA_APPLIED sourceGUID: ", sourceGUID, " targetGUID: ",
+        targetGUID, " targetName: ", targetName, " spellID: ", spellID,
+        " spellName: ", spellName, " auraType: ", auraType, " amount: ", amount)
+
+    table.insert(TGUA.aura_updates, {targetGUID = targetGUID,
+                                     spellName = spellName,
+                                     timestamp = GetTime(),
+                                     refresh = false})
+end
+
+function TGUA.CLEU_SPELL_AURA_REFRESH(cleu_timestamp, _, sourceGUID, _, _, _,
+                                      targetGUID, targetName, _, _, spellId,
+                                      spellName, _, auraType, amount)
+    dbg("CLEU_SPELL_AURA_REFRESH sourceGUID: ", sourceGUID, " targetGUID: ",
+        targetGUID, " targetName: ", targetName, " spellID: ", spellID,
+        " spellName: ", spellName, " auraType: ", auraType, " amount: ", amount)
+    if sourceGUID ~= UnitGUID("player") then
+        return
+    end
+
+    table.insert(TGUA.aura_updates, {targetGUID = targetGUID,
+                                     spellName = spellName,
+                                     timestamp = GetTime(),
+                                     refresh = true})
+end
+                      
 function TGUA.CLEU_UNIT_DIED(cleu_timestamp, _, _, _, _, _, targetGUID,
                               targetName)
     dbg("CLEU_UNIT_DIED targetGUID: ", targetGUID, " targetName: ", targetName)
-
-    local removedOne
-    repeat
-        removedOne = false
-        for k, v in ipairs(TGUA.tracked_spells) do
-            if v.cleu_cast.targetGUID == targetGUID then
-                local meta_cast = table.remove(TGUA.tracked_spells, k)
-                meta_cast.event_cast:free()
-                meta_cast.cleu_cast:free()
-                removedOne = true
-                break
-            end
-        end
-    until(removedOne == false)
+    TGUA.PurgeGUID(targetGUID)
 end
 
 function TGUA.OnUpdate()
     -- Process the cast FIFO.
     TGUA.ProcessCastFIFO()
 
-    -- Start by removing any old spells from the casting list
-    local removedOne
-    local currTime = GetTime()
-    repeat
-        removedOne = false
-        for k, v in ipairs(TGUA.tracked_spells) do
-            if v.event_cast.timestamp + v.event_cast.duration <= currTime then
-                local meta_cast = table.remove(TGUA.tracked_spells, k)
-                meta_cast.event_cast:free()
-                meta_cast.cleu_cast:free()
-                removedOne = true
-                break
-            end
-        end
-    until(removedOne == false)
+    -- Process aura updates.
+    TGUA.ProcessAuraUpdates()
+
+    -- Remove expired casts.
+    TGUA.PurgeExpiredCasts()
+end
+
+function TGUA.GetCastBySpellName(targetGUID, spellName)
+    local targetCasts = TGUA.tracked_spells[targetGUID]
+    if targetCasts ~= nil then
+        return targetCasts[spellName]
+    end
+
+    return nil
 end
 
 function TGUA.GetAuraInfoBySpellID(targetGUID, spellID)
+    local targetCasts = TGUA.tracked_spells[targetGUID]
+    if targetCasts == nil then
+        return 0, 0
+    end
+
     if spellID == nil then
         return 0, 0
     end
 
-    local duration = TGUnit.AuraDuration[spellID]
-    if duration == nil then
+    local spellName = GetSpellInfo(spellID)
+    if spellName == nil then
         return 0, 0
     end
 
-    for k, v in ipairs(TGUA.tracked_spells) do
-        if (v.cleu_cast.targetGUID == targetGUID and
-            v.event_cast.spellID == spellID)
-        then
-            return duration, v.event_cast.timestamp + duration
-        end
+    local cast = targetCasts[spellName]
+    if cast == nil then
+        return 0, 0
     end
 
-    return 0, 0
+    return cast.auraDuration, cast.timestamp + cast.auraDuration
+end
+
+function TGUA.DebugToggle()
+    if TGUA.log_level == 1 then
+        TGUA.log_level = 2
+    else
+        TGUA.log_level = 1
+    end
+end
+
+function TGUA.TargetInfo()
+    local guid = UnitGUID("target")
+    if guid == nil then
+        return
+    end
+
+    local targetCasts = TGUA.tracked_spells[guid]
+    if targetCasts ~= nil then
+        for name, cast in pairs(targetCasts) do
+            print(name, ":", cast.timestamp + cast.auraDuration - GetTime())
+        end
+    end
 end
 
 TGEventManager.Register(TGUA)
+
+SlashCmdList["TGUADBG"] = TGUA.DebugToggle
+SLASH_TGUADBG1 = "/tguadbg"
+
+SlashCmdList["TGUAINFO"] = TGUA.TargetInfo
+SLASH_TGUAINFO1 = "/tguainfo"

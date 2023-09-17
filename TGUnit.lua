@@ -960,8 +960,10 @@ end
 
 function TGUnit.TrackedAurasChanged(targetGUID, spellID)
     local guidUnits = TGUnit.guidList[targetGUID]
-    for unit in pairs(guidUnits) do
-        unit:Poll(unit.auraFuncs)
+    if guidUnits ~= nil then
+        for unit in pairs(guidUnits) do
+            unit:Poll(unit.auraFuncs)
+        end
     end
 end
 
