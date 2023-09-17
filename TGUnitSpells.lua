@@ -52,6 +52,13 @@ function TGUS.GetSpellInfo(sourceGUID, sourceName, spellName)
     return spellInfo
 end
 
+function TGUS.GetUnitCast(unitGUID)
+    if unitGUID == nil then
+        return nil
+    end
+    return TGUS.tracked_spells[unitGUID]
+end
+
 function TGUS.TrackCast(cast)
     local oldCast = TGUS.tracked_spells[cast.sourceGUID]
     if oldCast ~= nil then
@@ -69,6 +76,8 @@ function TGUS.TrackCast(cast)
         print(cast.sourceGUID, " is casting ", cast.spellInfo.name,
               " with an unknown duration.")
     end
+
+    --TGUnit.TrackedSpellcastChanged(cast)
 end
 
 function TGUS.UntrackCast(cast)

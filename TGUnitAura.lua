@@ -425,7 +425,7 @@ function TGUA.ProcessCastFIFO()
     cleu_cast:free()
 
     -- Notify the core that a tracked spell has changed.
-    TGUnit.TrackedAurasChanged(cast.targetGUID, cast.spellID)
+    TGUnit.TrackedAurasChanged(cast.targetGUID)
 end
 
 function TGUA.DumpCastFIFO()

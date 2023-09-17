@@ -86,14 +86,6 @@ function TGTestObject:UPDATE_COMBAT(unit)
     end
 end
 
-function TGTestObject:UPDATE_PLAYER_SPELL(unit)
-    TGDbg(unit.id..": player cast is now "..tostring(unit.playerCastInfo.spell))
-end
-
-function TGTestObject:UPDATE_COMBAT_SPELL(unit)
-    TGDbg(unit.id..": log cast is now "..tostring(unit.logCastInfo.spell))
-end
-
 function TGTestObject:UPDATE_REACTION(unit)
     local str
     if unit.reaction == TGU.REACTION_FRIENDLY then
