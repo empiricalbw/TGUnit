@@ -159,6 +159,17 @@ function TGUS.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
     cast:free()
 end
 
+function TGUS.CLEU_SPELL_INTERRUPT(cleu_timestamp, _, sourceGUID, _, _, _,
+                                   targetGUID, targetName, _, _, _,
+                                   interruptName, _, _, spellName, _)
+    local cast = TGUS.tracked_spells[targetGUID]
+    if cast ~= nil then
+        --print("Cast interrupted.")
+        TGUS.UntrackCast(cast)
+        cast:free()
+    end
+end
+
 function TGUS.CLEU_SPELL_CAST_FAILED(cleu_timestamp, _, sourceGUID, _, _, _,
                                      targetGUID, targetName, _, _, _,
                                      spellName, _, failedType)
