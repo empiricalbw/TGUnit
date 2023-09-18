@@ -67,15 +67,17 @@ function TGUS.TrackCast(cast)
 
     TGUS.tracked_spells[cast.sourceGUID] = cast
 
+    --[[
     local castTime = cast.spellInfo.castTime or "unknown"
     if cast.spellInfo.castTime ~= nil then
-        print(cast.sourceGUID, " is casting ", cast.spellInfo.name,
+        print(cast.sourceName, " is casting ", cast.spellInfo.name,
               " with an expected duration of ", cast.spellInfo.castTime,
               " sec.")
     else
-        print(cast.sourceGUID, " is casting ", cast.spellInfo.name,
+        print(cast.sourceName, " is casting ", cast.spellInfo.name,
               " with an unknown duration.")
     end
+    ]]
 
     --TGUnit.TrackedSpellcastChanged(cast)
 end
@@ -171,7 +173,7 @@ end
 function TGUS.CLEU_UNIT_DIED(cleu_timestamp, _, _, _, _, _, unitGUID, unitName)
     local cast = TGUS.tracked_spells[unitGUID]
     if cast ~= nil then
-        print("Cast target died.")
+        --print("Cast target died.")
         TGUS.UntrackCast(cast)
         cast:free()
     end
