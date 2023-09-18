@@ -8,6 +8,10 @@ local TGUS = {
 }
 TGUnit.SpellTracker = TGUS
 
+function TGUS.IsNPCGuid(guid)
+    return strsub(guid, 1, 8) == "Creature"
+end
+
 function TGUS.GetNPCInfo(guid, name, insert)
     local decodedGUID = {strsplit("-", guid)}
     local database
@@ -149,7 +153,11 @@ function TGUS.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
         local spellInfo = cast.spellInfo
         if spellInfo.castTime == nil or elapsed < 100 then
             --print("Updating cast time to ", elapsed)
-            spellInfo.castTime = elapsed
+            if TGUS.IsNPCGuid(sourceGUID) or spellInfo.castTime == nil then
+                spellInfo.castTime = elapsed
+            elseif elapsed >= 0.5 then
+                spellInfo.castTime = min(spellInfo.castTime, elapsed)
+            end
         end
     else
         print("Cast didn't match.", targetGUID, cast.spellInfo.name, spellName)
