@@ -8,6 +8,40 @@ local TGUS = {
 }
 TGUnit.SpellTracker = TGUS
 
+-- A type to keep track of casts generated via CLEU events.
+local TGUnitCLEUCast = {}
+TGUnitCLEUCast.__index = TGUnitCLEUCast
+TGUnitCLEUCast.free_casts = {}
+
+function TGUnitCLEUCast:new(cleu_timestamp, sourceGUID, sourceName, targetName,
+                            spellInfo)
+    -- CLEU timestamps are Unix time.
+    local cast
+    if #TGUnitCLEUCast.free_casts > 0 then
+        cast = table.remove(TGUnitCLEUCast.free_casts)
+        assert(cast.allocated == false)
+    else
+        cast = {}
+        setmetatable(cast, self)
+    end
+
+    cast.allocated      = true
+    cast.timestamp      = GetTime()
+    cast.cleu_timestamp = cleu_timestamp
+    cast.sourceGUID     = sourceGUID
+    cast.sourceName     = sourceName
+    cast.targetName     = targetName
+    cast.spellInfo      = spellInfo
+
+    return cast
+end
+
+function TGUnitCLEUCast:free()
+    assert(self.allocated == true)
+    self.allocated = false
+    table.insert(TGUnitCLEUCast.free_casts, self)
+end
+
 function TGUS.IsNPCGuid(guid)
     return strsub(guid, 1, 8) == "Creature"
 end
@@ -44,6 +78,10 @@ end
 
 function TGUS.GetSpellInfo(sourceGUID, sourceName, spellName)
     local npcInfo = TGUS.GetNPCInfo(sourceGUID, sourceName, true)
+    if npcInfo == nil then
+        return nil
+    end
+
     local spellInfo = npcInfo.spells[spellName]
     if spellInfo == nil then
         spellInfo = {
@@ -63,65 +101,27 @@ function TGUS.GetUnitCast(unitGUID)
     return TGUS.tracked_spells[unitGUID]
 end
 
-function TGUS.TrackCast(cast)
-    local oldCast = TGUS.tracked_spells[cast.sourceGUID]
+function TGUS.TrackCast(cleu_timestamp, sourceGUID, sourceName, targetName,
+                        spellInfo)
+    local oldCast = TGUS.tracked_spells[sourceGUID]
     if oldCast ~= nil then
         oldCast:free()
     end
 
-    TGUS.tracked_spells[cast.sourceGUID] = cast
+    TGUS.tracked_spells[sourceGUID] = TGUnitCLEUCast:new(
+        cleu_timestamp, sourceGUID, sourceName, targetName, spellInfo)
+end
 
-    --[[
-    local castTime = cast.spellInfo.castTime or "unknown"
-    if cast.spellInfo.castTime ~= nil then
-        print(cast.sourceName, " is casting ", cast.spellInfo.name,
-              " with an expected duration of ", cast.spellInfo.castTime,
-              " sec.")
-    else
-        print(cast.sourceName, " is casting ", cast.spellInfo.name,
-              " with an unknown duration.")
+function TGUS.PurgeGUID(guid)
+    local cast = TGUS.tracked_spells[guid]
+    TGUS.tracked_spells[guid] = nil
+    if cast ~= nil then
+        cast:free()
     end
-    ]]
-
-    --TGUnit.TrackedSpellcastChanged(cast)
 end
 
-function TGUS.UntrackCast(cast)
-    TGUS.tracked_spells[cast.sourceGUID] = nil
-end
-
--- A type to keep track of casts generated via CLEU events.
-local TGUnitCLEUCast = {}
-TGUnitCLEUCast.__index = TGUnitCLEUCast
-TGUnitCLEUCast.free_casts = {}
-
-function TGUnitCLEUCast:new(cleu_timestamp, sourceGUID, sourceName, targetName,
-                            spellInfo)
-    -- CLEU timestamps are Unix time.
-    local cast
-    if #TGUnitCLEUCast.free_casts > 0 then
-        cast = table.remove(TGUnitCLEUCast.free_casts)
-        assert(cast.allocated == false)
-    else
-        cast = {}
-        setmetatable(cast, self)
-    end
-
-    cast.allocated      = true
-    cast.timestamp      = GetTime()
-    cast.cleu_timestamp = cleu_timestamp
-    cast.sourceGUID     = sourceGUID
-    cast.sourceName     = sourceName
-    cast.targetName     = targetName
-    cast.spellInfo      = spellInfo
-
-    return cast
-end
-
-function TGUnitCLEUCast:free()
-    assert(self.allocated == true)
-    self.allocated = false
-    table.insert(TGUnitCLEUCast.free_casts, self)
+function TGUS.PurgeCast(cast)
+    TGUS.PurgeGUID(cast.sourceGUID)
 end
 
 function TGUS.CLEU_SPELL_CAST_START(cleu_timestamp, _, sourceGUID, sourceName,
@@ -132,9 +132,8 @@ function TGUS.CLEU_SPELL_CAST_START(cleu_timestamp, _, sourceGUID, sourceName,
     end
 
     --print("Cast started.)
-    local cast = TGUnitCLEUCast:new(cleu_timestamp, sourceGUID, sourceName,
-                                    targetName, spellInfo)
-    TGUS.TrackCast(cast)
+    TGUS.TrackCast(cleu_timestamp, sourceGUID, sourceName, targetName,
+                   spellInfo)
 end
 
 function TGUS.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
@@ -163,8 +162,7 @@ function TGUS.CLEU_SPELL_CAST_SUCCESS(cleu_timestamp, _, sourceGUID, _, _, _,
         print("Cast didn't match.", targetGUID, cast.spellInfo.name, spellName)
     end
 
-    TGUS.UntrackCast(cast)
-    cast:free()
+    TGUS.PurgeCast(cast)
 end
 
 function TGUS.CLEU_SPELL_INTERRUPT(cleu_timestamp, _, sourceGUID, _, _, _,
@@ -173,8 +171,7 @@ function TGUS.CLEU_SPELL_INTERRUPT(cleu_timestamp, _, sourceGUID, _, _, _,
     local cast = TGUS.tracked_spells[targetGUID]
     if cast ~= nil then
         --print("Cast interrupted.")
-        TGUS.UntrackCast(cast)
-        cast:free()
+        TGUS.PurgeCast(cast)
     end
 end
 
@@ -184,8 +181,7 @@ function TGUS.CLEU_SPELL_CAST_FAILED(cleu_timestamp, _, sourceGUID, _, _, _,
     local cast = TGUS.tracked_spells[sourceGUID]
     if cast ~= nil then
         --print("Cast failed.")
-        TGUS.UntrackCast(cast)
-        cast:free()
+        TGUS.PurgeCast(cast)
     end
 end
 
@@ -193,8 +189,7 @@ function TGUS.CLEU_UNIT_DIED(cleu_timestamp, _, _, _, _, _, unitGUID, unitName)
     local cast = TGUS.tracked_spells[unitGUID]
     if cast ~= nil then
         --print("Cast target died.")
-        TGUS.UntrackCast(cast)
-        cast:free()
+        TGUS.PurgeCast(cast)
     end
 end
 
@@ -202,9 +197,8 @@ function TGUS.OnUpdate()
     local t = GetTime()
     for sourceGUID, cast in pairs(TGUS.tracked_spells) do
         if t - cast.timestamp > 100 then
-            print("Purging cast ", cast.sourceGUID, " ", cast.spellInfo.name)
-            TGUS.UntrackCast(cast)
-            cast:free()
+            --print("Purging cast ", cast.sourceGUID, " ", cast.spellInfo.name)
+            TGUS.PurgeCast(cast)
         end
     end
 end
