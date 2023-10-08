@@ -703,7 +703,7 @@ end
 -- can be "Unknown" and the class nil but there is no event to see when class
 -- becomes non-nil.
 function TGUnit:HandleNameChanged()
-    print("HandleNameChanged")
+    --print("HandleNameChanged")
     return bit.bor(self:Poll_NAME(),
                    self:Poll_CLASS())
 end

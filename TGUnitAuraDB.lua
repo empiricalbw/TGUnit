@@ -165,11 +165,11 @@ function TGUADB.UpdateTalents()
     local _, class = UnitClass("player")
     if class == "PRIEST" then
         _, _, _, _, improvedSWPRank = GetTalentInfo(3,4)
-        print("Improved SW:P Rank: ", improvedSWPRank)
+        --print("Improved SW:P Rank:", improvedSWPRank)
     end
     if class == "MAGE" then
         _, _, _, _, permafrostRank = GetTalentInfo(3, 7)
-        print("Permafrost Rank: ", permafrostRank)
+        --print("Permafrost Rank: ", permafrostRank)
     end
 
     -- The list of heal or damage over time spells that we are interested in
@@ -219,7 +219,6 @@ function TGUADB.PLAYER_ENTERING_WORLD()
 end
 
 function TGUADB.PLAYER_TALENT_UPDATE()
-    print("PLAYER_TALENT_UPDATE")
     TGUADB.UpdateTalents()
 end
 

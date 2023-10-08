@@ -384,8 +384,10 @@ function TGUA.PushCLEUCast(cast)
             assert(last_cast.timestamp  == cast.timestamp)
             assert(last_cast.targetGUID == cast.targetGUID)
             assert(last_cast.spellName  == cast.spellName)
+            --[[
             print("PushCLEUCast: Replacing "..last_cast.spellName.." "..
                   last_cast.event.." with "..cast.event)
+            ]]
             last_cast.event = cast.event
         end
     else
@@ -413,7 +415,7 @@ function TGUA.ProcessCastFIFO()
     assert(event_cast.timestamp == cleu_cast.gt_timestamp)
 
     if cleu_cast.event ~= "SPELL_CAST_SUCCESS" then
-        print("ProcessCastFIFO: CLEU event was "..cleu_cast.event)
+        --print("ProcessCastFIFO: CLEU event was "..cleu_cast.event)
         event_cast:free()
         cleu_cast:free()
         return
