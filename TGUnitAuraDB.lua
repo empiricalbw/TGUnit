@@ -164,7 +164,7 @@ function TGUADB.UpdateTalents()
     local permafrostRank = 0
     local _, class = UnitClass("player")
     if class == "PRIEST" then
-        _, _, _, _, improvedSWPRank = GetTalentInfo(3,4)
+        _, _, _, _, improvedSWPRank = GetTalentInfo(3,8)
         --print("Improved SW:P Rank:", improvedSWPRank)
     end
     if class == "MAGE" then
