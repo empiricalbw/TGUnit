@@ -126,6 +126,7 @@ end
 -- Construct a TGUnit.
 function TGUnit:TGUnit(id)
     self.id             = id
+    self.guid           = nil
     self.exists         = false
     self.isPlayerTarget = nil
     self.name           = nil
