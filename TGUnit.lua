@@ -134,7 +134,7 @@ function TGUnit:TGUnit(id)
     self.creatureType   = nil
     self.health         = {current=nil,max=nil}
     self.power          = {type=nil,current=nil,max=nil}
-    self.cleuCastInfo   = {timestamp=nil, spellInfo=nil}
+    self.castInfo       = {}
     self.level          = nil
     self.combat         = nil
     self.leader         = nil
@@ -174,12 +174,10 @@ function TGUnit:TGUnit(id)
         self.listeners["UPDATE_"..k] = {}
     end
 
-    self.allFlags   = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.pollFlags  = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.allFuncs   = TGUnit.GenFuncs(self.allFlags)
-    self.pollFuncs  = TGUnit.GenFuncs(self.pollFlags)
-    self.auraFuncs  = TGUnit.GenFuncs(bit.bor(TGU.FLAGS.BUFFS,
-                                              TGU.FLAGS.DEBUFFS))
+    self.allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.allFuncs  = TGUnit.GenFuncs(self.allFlags)
+    self.pollFuncs = TGUnit.GenFuncs(self.pollFlags)
 
     self:Poll(self.allFuncs)
 end
@@ -455,13 +453,6 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
         local name, texture, applications, auraType, duration, expirationTime,
             source, _, _, spellID = UnitAura(self.id, i, filter)
 
-        if source == "player" then
-            if duration == 0 or expirationTime == 0 then
-                duration, expirationTime =
-                    TGUnit.AuraTracker.GetAuraInfoBySpellID(self.guid, spellID)
-            end
-        end
-
         if (aura.name           ~= name or
             aura.texture        ~= texture or
             aura.applications   ~= applications or
@@ -536,23 +527,49 @@ function TGUnit:HandleAurasChanged()
                    self:Poll_DEBUFFS())
 end
 
--- Update a unit's combat log spellcast via the spellcast tracker.
-function TGUnit:Poll_CLEU_SPELL()
-    local cast = TGUnit.SpellTracker.GetUnitCast(self.guid)
-    if cast ~= nil then
-        local changed = (cast.timestamp ~= self.cleuCastInfo.timestamp or
-                         cast.spellInfo ~= self.cleuCastInfo.spellInfo)
-        if changed then
-            self.cleuCastInfo.timestamp = cast.timestamp
-            self.cleuCastInfo.spellInfo = cast.spellInfo
-            return TGU.FLAGS.CLEU_SPELL
-        end
+-- Update the unit's spellcast.
+function TGUnit:Poll_SPELL()
+    local spell, _, texture, startTime, endTime, _, castGUID =
+        UnitCastingInfo(self.id)
+
+    local spellType
+    if spell ~= nil then
+        spellType = "Casting"
     else
-        if self.cleuCastInfo.timestamp or self.cleuCastInfo.spellInfo then
-            self.cleuCastInfo.timestamp = nil
-            self.cleuCastInfo.spellInfo = nil
-            return TGU.FLAGS.CLEU_SPELL
+        -- Note that displayName for a channeled spell just returns
+        -- "Channeling" instead of the spell name - this is because the
+        -- Blizzard UI only displays the spell name for a casted spell and just
+        -- displays "Channeling" for a channeled spell.  So we probably want
+        -- to use the spell name instead of the display name.
+        castGUID = nil
+        spell, _, texture, startTime, endTime = UnitChannelInfo(self.id)
+
+        if spell ~= nil then
+            spellType = "Channeling"
         end
+    end
+
+    if startTime ~= nil then
+        startTime = startTime / 1000.0
+    end
+    if endTime ~= nil then
+        endTime = endTime / 1000.0
+    end
+
+    local changed = (spellType ~= self.castInfo.spellType or
+                     spell     ~= self.castInfo.spell or
+                     texture   ~= self.castInfo.texture or
+                     startTime ~= self.castInfo.startTime or
+                     endTime   ~= self.castInfo.endTime or
+                     castGUID  ~= self.castInfo.castGUID)
+    if changed then
+        self.castInfo.spellType = spellType
+        self.castInfo.spell     = spell
+        self.castInfo.texture   = texture
+        self.castInfo.startTime = startTime
+        self.castInfo.endTime   = endTime
+        self.castInfo.castGUID  = castGUID
+        return TGU.FLAGS.SPELL
     end
 
     return 0
@@ -768,6 +785,80 @@ function TGUnit.UNIT_MODEL_CHANGED(id)
     end
 end
 
+-- Handle SPELLCAST events.  The typical chain of events goes as follows for a
+-- non-instant spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_SUCCEEDED
+--      UNIT_SPELLCAST_STOP
+--
+-- If the player moves to cancel the spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_STOP
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--
+-- If the player hits escape to cancel the spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_FAILED_QUIET
+--      UNIT_SPELLCAST_STOP
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--      UNIT_SPELLCAST_INTERRUPTED
+--
+-- If the player starts a cast then tries to do an instant-cast spell while
+-- casting:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_START
+--      UNIT_SPELLCAST_FAILED (for a new castingGUID)
+--      UNIT_SPELLCAST_SUCCEEDED
+--      UNIT_SPELLCAST_STOP
+--
+-- If the player is out of range at the start of the cast or tries to cast
+-- a damage spell on a friendly target:
+--
+--      UNIT_SPELLCAST_FAILED
+--
+-- If the player performs an instant-cast spell:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_SUCCEEDED
+--
+-- If the player tries to dispel something but there is nothing to dispel:
+--
+--      UNIT_SPELLCAST_SENT (only when unit == "player")
+--      UNIT_SPELLCAST_FAILED
+--
+-- When channeling, something like Mind Flay goes like this if the cast lands
+-- (note the missing castGUIDs on the CHANNEL events):
+--
+--      UNIT_SPELLCAST_SENT
+--      UNIT_SPELLCAST_CHANNEL_START (with castGUID == nil)
+--      UNIT_SPELLCAST_SUCCEEDED (fires when the cast LANDS, not when it
+--                                completes)
+--      ...tick, tick, tick...
+--      UNIT_SPELLCAST_CHANNEL_STOP (with castGUID == nil)
+function TGUnit.HandleUnitSpellcastEvent(unitId, castGUID, spellID)
+    local unit = TGUnit.unitList[unitId]
+    if unit ~= nil then
+        unit:NotifyListeners(unit:Poll_SPELL())
+    end
+end
+TGUnit.UNIT_SPELLCAST_START          = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_STOP           = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_DELAYED        = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_START  = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_STOP   = TGUnit.HandleUnitSpellcastEvent
+TGUnit.UNIT_SPELLCAST_CHANNEL_UPDATE = TGUnit.HandleUnitSpellcastEvent
+
 -- Debug function to print the unit list.
 function TGUnit.PrintUnitList()
     for _, unit in pairs(TGUnit.unitList) do
@@ -784,15 +875,6 @@ function TGUnit.PrintGuidList()
             str = str.." "..unit.id
         end
         TGDbg(str)
-    end
-end
-
-function TGUnit.TrackedAurasChanged(unitGUID)
-    local guidUnits = TGUnit.guidList[unitGUID]
-    if guidUnits ~= nil then
-        for unit in pairs(guidUnits) do
-            unit:Poll(unit.auraFuncs)
-        end
     end
 end
 

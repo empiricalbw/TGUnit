@@ -1,4 +1,4 @@
-## Interface: 11404
+## Interface: 11500
 ## Title: TGUnit
 ## Author: Holytoledo
 ## Version: 1.0
@@ -6,13 +6,10 @@
 ## Notes: Thor's Godly Unit
 ## URL: 
 ## Dependencies: TGEventManager TGLog
-## SavedVariables: TGUA_TRACKED_AURAS_DB TGUS_TRACKED_SPELLS_DB
+## SavedVariables:
 
 TGDebugging.lua
 TGUnitConstants.lua
 TGUnit.lua
-TGUnitAura.lua
-TGUnitAuraDB.lua
-TGUnitSpells.lua
 
 TGTest.lua
