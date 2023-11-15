@@ -451,7 +451,7 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     auraCountsCache.Enrage  = 0
     for i, aura in ipairs(auras) do
         local name, texture, applications, auraType, duration, expirationTime,
-            source = UnitAura(self.id, i, filter)
+            source, _, _, spellID = UnitAura(self.id, i, filter)
 
         if (aura.name           ~= name or
             aura.texture        ~= texture or
@@ -459,7 +459,8 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
             aura.auraType       ~= auraType or
             aura.duration       ~= duration or
             aura.expirationTime ~= expirationTime or
-            aura.source         ~= source)
+            aura.source         ~= source or
+            aura.spellId        ~= spellID)
         then
             aura.name           = name
             aura.texture        = texture
@@ -468,6 +469,7 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
             aura.duration       = duration
             aura.expirationTime = expirationTime
             aura.source         = source
+            aura.spellId        = spellID
             changedAuras        = bit.bor(changedAuras, bit.lshift(1, i))
         end
 
