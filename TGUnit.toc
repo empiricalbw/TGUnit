@@ -6,10 +6,12 @@
 ## Notes: Thor's Godly Unit
 ## URL: 
 ## Dependencies: TGEventManager TGLog
-## SavedVariables: 
+## SavedVariables: TGUA_TRACKED_AURAS_DB
 
 TGDebugging.lua
 TGUnitConstants.lua
 TGUnit.lua
+TGUnitAura.lua
+TGUnitAuraDB.lua
 
 TGTest.lua

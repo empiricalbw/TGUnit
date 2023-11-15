@@ -175,10 +175,12 @@ function TGUnit:TGUnit(id)
         self.listeners["UPDATE_"..k] = {}
     end
 
-    self.allFlags  = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.pollFlags = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
-    self.allFuncs  = TGUnit.GenFuncs(self.allFlags)
-    self.pollFuncs = TGUnit.GenFuncs(self.pollFlags)
+    self.allFlags   = TGU.ALLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.pollFlags  = TGU.POLLFLAGS[id] or TGU.ALL_NONPLAYER_FLAGS
+    self.allFuncs   = TGUnit.GenFuncs(self.allFlags)
+    self.pollFuncs  = TGUnit.GenFuncs(self.pollFlags)
+    self.auraFuncs  = TGUnit.GenFuncs(bit.bor(TGU.FLAGS.BUFFS,
+                                              TGU.FLAGS.DEBUFFS))
 
     self:Poll(self.allFuncs)
 end
@@ -453,6 +455,13 @@ function TGUnit:PollAuras(auras, auraCounts, filter)
     for i, aura in ipairs(auras) do
         local name, texture, applications, auraType, duration, expirationTime,
             source, _, _, spellID = UnitAura(self.id, i, filter)
+
+        if source == "player" then
+            if duration == 0 or expirationTime == 0 then
+                duration, expirationTime =
+                    TGUnit.AuraTracker.GetAuraInfoBySpellID(self.guid, spellID)
+            end
+        end
 
         if (aura.name           ~= name or
             aura.texture        ~= texture or
@@ -948,6 +957,15 @@ function TGUnit.PrintGuidList()
             str = str.." "..unit.id
         end
         TGDbg(str)
+    end
+end
+
+function TGUnit.TrackedAurasChanged(unitGUID)
+    local guidUnits = TGUnit.guidList[unitGUID]
+    if guidUnits ~= nil then
+        for unit in pairs(guidUnits) do
+            unit:Poll(unit.auraFuncs)
+        end
     end
 end
 
