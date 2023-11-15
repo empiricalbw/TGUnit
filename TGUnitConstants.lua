@@ -17,7 +17,7 @@ TGU.FLAGS = {
     COMBAT         = bit.lshift(1,  7), -- In combat or not
     BUFFS          = bit.lshift(1,  8), -- Unit buffs
     DEBUFFS        = bit.lshift(1,  9), -- Unit debuffs
-    PLAYER_SPELL   = bit.lshift(1, 10), -- Spell being cast by the player
+    CLEU_SPELL     = bit.lshift(1, 10), -- Spells from the combat log
     REACTION       = bit.lshift(1, 11), -- Friendly, neutral or hostile
     LEADER         = bit.lshift(1, 12), -- Unit is group or raid leader
     RAIDICON       = bit.lshift(1, 13), -- Unit's raid icon num or nil if none
@@ -33,7 +33,7 @@ TGU.FLAGS = {
     LOOT_MASTER    = bit.lshift(1, 23), -- Unit is loot master
     EXISTS         = bit.lshift(1, 24), -- Whether or not a unit exists
     GUID           = bit.lshift(1, 25), -- The unit's globally unique id
-    COMBAT_SPELL   = bit.lshift(1, 26), -- Spellcast detected in combat log
+                                        -- 26 - unused
     AFKSTATUS      = bit.lshift(1, 27), -- Whether the unit is AFK or not
     MODEL          = bit.lshift(1, 28), -- Unit model
     ROLE           = bit.lshift(1, 29), -- LFG role
@@ -63,7 +63,6 @@ TGU.PLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.COMBAT,
     TGU.FLAGS.BUFFS,
     TGU.FLAGS.DEBUFFS,
-    TGU.FLAGS.PLAYER_SPELL,
     TGU.FLAGS.LEADER,
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
@@ -82,7 +81,8 @@ TGU.PLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.CREATURETYPE,
     TGU.FLAGS.EXISTS,
     TGU.FLAGS.GUID,
-    TGU.FLAGS.ROLE)
+    TGU.FLAGS.ROLE,
+    TGU.FLAGS.CLEU_SPELL)
 TGU.ALL_PLAYER_FLAGS = bit.bor(TGU.PLAYEREVENT_MASK, TGU.PLAYERPOLL_MASK)
 
 -- This bitmask describes the set of attributes for which the game engine
@@ -102,7 +102,6 @@ TGU.NONPLAYEREVENT_MASK = bit.bor(
     TGU.FLAGS.RAIDICON,
     TGU.FLAGS.PVPSTATUS,
     TGU.FLAGS.AFKSTATUS,
-    TGU.FLAGS.COMBAT_SPELL,
     TGU.FLAGS.MODEL)
 TGU.NONPLAYERPOLL_MASK = bit.bor(
     --TGU.FLAGS.COMBOPOINTS,
@@ -118,7 +117,8 @@ TGU.NONPLAYERPOLL_MASK = bit.bor(
     TGU.FLAGS.THREAT,
     TGU.FLAGS.EXISTS,
     TGU.FLAGS.GUID,
-    TGU.FLAGS.ROLE)
+    TGU.FLAGS.ROLE,
+    TGU.FLAGS.CLEU_SPELL)
 TGU.ALL_NONPLAYER_FLAGS = bit.bor(TGU.NONPLAYEREVENT_MASK,
                                   TGU.NONPLAYERPOLL_MASK)
 
